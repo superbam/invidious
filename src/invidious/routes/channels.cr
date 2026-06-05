@@ -56,6 +56,10 @@ module Invidious::Routes::Channels
         items, next_continuation = Channel::Tabs.get_60_videos(
           channel, continuation: continuation, sort_by: sort_by
         )
+
+        if env.get("preferences").as(Preferences).filter_shorts
+          items = items.reject { |item| item.is_a?(SearchVideo) && item.badges.short? }
+        end
       end
     end
 

@@ -46,6 +46,7 @@ struct ConfigPreferences
   property speed : Float32 = 1.0_f32
   property thin_mode : Bool = false
   property unseen_only : Bool = false
+  property filter_shorts : Bool = false
   property video_loop : Bool = false
   property extend_desc : Bool = false
   property volume : Int32 = 100

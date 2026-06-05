@@ -76,6 +76,10 @@ module Invidious::Routes::Search
         return error_template(500, ex)
       end
 
+      if preferences.filter_shorts
+        items = items.reject { |item| item.is_a?(SearchVideo) && item.badges.short? }
+      end
+
       redirect_url = Invidious::Frontend::Misc.redirect_url(env)
 
       # Pagination

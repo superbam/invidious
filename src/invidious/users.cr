@@ -102,5 +102,10 @@ def get_subscription_feed(user, max_results = 40, page = 1)
     videos = videos - notifications
   end
 
+  if user.preferences.filter_shorts
+    videos = videos.reject(&.is_short)
+    notifications = notifications.reject(&.is_short)
+  end
+
   return videos, notifications
 end

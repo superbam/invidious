@@ -9,6 +9,7 @@ enum VideoBadges
   VR180
   VR360
   ClosedCaptions
+  Short
 end
 
 struct SearchVideo

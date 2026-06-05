@@ -21,6 +21,7 @@ struct ChannelVideo
   property live_now : Bool = false
   property premiere_timestamp : Time? = nil
   property views : Int64? = nil
+  property is_short : Bool = false
 
   def to_json(locale, json : JSON::Builder)
     json.object do
@@ -226,6 +227,9 @@ def fetch_channel(ucid, pull_all_videos : Bool)
     live_now = channel_video.try &.badges.live_now?
     live_now ||= false
 
+    is_short = channel_video.try &.badges.short?
+    is_short ||= false
+
     premiere_timestamp = channel_video.try &.premiere_timestamp
 
     video = ChannelVideo.new({
@@ -239,6 +243,7 @@ def fetch_channel(ucid, pull_all_videos : Bool)
       live_now:           live_now,
       premiere_timestamp: premiere_timestamp,
       views:              views,
+      is_short:           is_short,
     })
 
     LOGGER.trace("fetch_channel: #{ucid} : video #{video_id} : Updating or inserting video")
@@ -274,6 +279,7 @@ def fetch_channel(ucid, pull_all_videos : Bool)
           live_now:           video.badges.live_now?,
           premiere_timestamp: video.premiere_timestamp,
           views:              video.views,
+          is_short:           video.badges.short?,
         })
 
         # We are notified of Red videos elsewhere (PubSub), which includes a correct published date,

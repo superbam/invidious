@@ -104,6 +104,7 @@ private module Parsers
 
       # The length information generally exist in "lengthText". However, the info can sometimes
       # be retrieved from "thumbnailOverlays" (e.g when the video is a "shorts" one).
+      is_short = false
       if length_container = item_contents["lengthText"]?
         length_seconds = decode_length_seconds(length_container["simpleText"].as_s)
       elsif length_container = item_contents["thumbnailOverlays"]?.try &.as_a.find(&.["thumbnailOverlayTimeStatusRenderer"]?)
@@ -115,9 +116,8 @@ private module Parsers
           length_text = length_text.as_s
 
           if length_text == "SHORTS"
-            # Approximate length to one minute, as "shorts" generally don't exceed that length.
-            # TODO: Add some sort of metadata for the type of video (normal, live, premiere, shorts)
             length_seconds = 60_i32
+            is_short = true
           else
             length_seconds = decode_length_seconds(length_text)
           end
@@ -130,6 +130,7 @@ private module Parsers
 
       premiere_timestamp = item_contents.dig?("upcomingEventData", "startTime").try { |t| Time.unix(t.as_s.to_i64) }
       badges = VideoBadges::None
+      badges |= VideoBadges::Short if is_short
       item_contents["badges"]?.try &.as_a.each do |badge|
         b = badge["metadataBadgeRenderer"]
         case b["label"]?.try &.as_s
@@ -621,7 +622,7 @@ private module Parsers
         premiere_timestamp: Time.unix(0),
         author_verified:    false,
         author_thumbnail:   nil,
-        badges:             VideoBadges::None,
+        badges:             VideoBadges::Short,
       })
     end
 
@@ -884,7 +885,7 @@ private module Parsers
         premiere_timestamp: Time.unix(0),
         author_verified:    false,
         author_thumbnail:   nil,
-        badges:             VideoBadges::None,
+        badges:             VideoBadges::Short,
       })
     end
 
