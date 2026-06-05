@@ -487,6 +487,90 @@ if (!video_data.params.listen && video_data.params.annotations) {
     });
 }
 
+// SponsorBlock integration
+(function () {
+    var sb_categories = video_data.sponsorblock_categories;
+    if (!sb_categories || sb_categories.length === 0) return;
+
+    var categories_param = sb_categories.join(',');
+    var skip_segments = [];
+    var skipped = {};
+
+    // Toast element for skip notifications
+    var notice = document.createElement('div');
+    notice.className = 'sponsorblock-notice';
+    document.getElementById('player-container').appendChild(notice);
+    var notice_timer = null;
+
+    function show_notice(text) {
+        clearTimeout(notice_timer);
+        notice.textContent = text;
+        notice.classList.add('visible');
+        notice_timer = setTimeout(function () {
+            notice.classList.remove('visible');
+        }, 2500);
+    }
+
+    var category_labels = {
+        sponsor:          'Sponsor',
+        selfpromo:        'Self-promotion',
+        interaction:      'Interaction reminder',
+        intro:            'Intro',
+        outro:            'Outro',
+        preview:          'Preview',
+        music_offtopic:   'Non-music section',
+        filler:           'Filler',
+    };
+
+    helpers.xhr('GET', '/api/v1/sponsorblock/timings/' + video_data.id + '?categories=' + categories_param, {
+        responseType: 'json',
+        timeout: 8000,
+        entity_name: 'sponsorblock',
+    }, {
+        on200: function (segments) {
+            if (!Array.isArray(segments) || segments.length === 0) return;
+
+            skip_segments = segments.filter(function (s) { return s.actionType === 'skip'; });
+
+            // Add visual markers on the progress bar
+            if (skip_segments.length > 0) {
+                var markers = skip_segments.map(function (s) {
+                    return {
+                        time:  s.segment[0],
+                        text:  category_labels[s.category] || s.category,
+                        class: 'sponsorblock-' + s.category,
+                    };
+                });
+                // The markers plugin may or may not be initialised yet
+                // (it's initialised above only when video_start/end are set).
+                if (typeof player.markers === 'function') {
+                    player.markers({ markers: markers });
+                } else {
+                    player.markers.add(markers);
+                }
+            }
+
+            // Auto-skip on timeupdate
+            player.on('timeupdate', function () {
+                var t = player.currentTime();
+                for (var i = 0; i < skip_segments.length; i++) {
+                    var seg = skip_segments[i];
+                    var uuid = seg.UUID;
+                    if (!skipped[uuid] && t >= seg.segment[0] && t < seg.segment[1]) {
+                        skipped[uuid] = true;
+                        player.currentTime(seg.segment[1]);
+                        show_notice((category_labels[seg.category] || seg.category) + ' skipped');
+                        break;
+                    }
+                }
+            });
+
+            // Reset skipped state on seek so re-watching a segment is possible
+            player.on('seeking', function () { skipped = {}; });
+        },
+    });
+}());
+
 function change_volume(delta) {
     const curVolume = player.volume();
     let newVolume = curVolume + delta;

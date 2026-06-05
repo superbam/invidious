@@ -126,6 +126,19 @@
                 <input name="save_player_pos" id="save_player_pos" type="checkbox" <% if preferences.save_player_pos %>checked<% end %>>
             </div>
 
+            <fieldset class="pure-group">
+                <legend><%= I18n.translate(locale, "SponsorBlock: skip categories") %></legend>
+                <% {"sponsor" => "Sponsor", "selfpromo" => "Self-promotion", "interaction" => "Interaction reminder",
+                    "intro" => "Intro", "outro" => "Outro", "preview" => "Preview/recap",
+                    "music_offtopic" => "Non-music (music videos)", "filler" => "Filler/tangent"}.each do |cat, label| %>
+                    <div class="pure-control-group">
+                        <label for="sponsorblock_<%= cat %>"><%= label %></label>
+                        <input name="sponsorblock_<%= cat %>" id="sponsorblock_<%= cat %>" type="checkbox"
+                            <% if preferences.sponsorblock_categories.includes?(cat) %>checked<% end %>>
+                    </div>
+                <% end %>
+            </fieldset>
+
             <% if user = env.get?("user").try &.as(User) %>
                 <% playlists = Invidious::Database::Playlists.select_user_created_playlists(user.email) %>
                 <div class="pure-control-group">

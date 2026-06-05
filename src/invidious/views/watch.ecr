@@ -66,7 +66,8 @@ we're going to need to do it here in order to allow for translations.
     "projection_type" => video.projection_type,
     "local_disabled" => CONFIG.disabled?("local"),
     "support_reddit" => true,
-    "live_now" => video.live_now
+    "live_now" => video.live_now,
+    "sponsorblock_categories" => preferences.sponsorblock_categories
 }.to_pretty_json
 %>
 </script>

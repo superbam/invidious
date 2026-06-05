@@ -143,6 +143,15 @@ module Invidious::Routes::PreferencesRoute
     filter_shorts ||= "off"
     filter_shorts = filter_shorts == "on"
 
+    valid_sb_categories = {"sponsor", "selfpromo", "interaction", "intro", "outro",
+                           "preview", "music_offtopic", "filler"}
+    sponsorblock_categories = [] of String
+    valid_sb_categories.each do |cat|
+      if env.params.body["sponsorblock_#{cat}"]?.try &.as(String) == "on"
+        sponsorblock_categories << cat
+      end
+    end
+
     notifications_only = env.params.body["notifications_only"]?.try &.as(String)
     notifications_only ||= "off"
     notifications_only = notifications_only == "on"
@@ -184,6 +193,7 @@ module Invidious::Routes::PreferencesRoute
       thin_mode:                   thin_mode,
       unseen_only:                 unseen_only,
       filter_shorts:               filter_shorts,
+      sponsorblock_categories:     sponsorblock_categories,
       video_loop:                  video_loop,
       volume:                      volume,
       extend_desc:                 extend_desc,

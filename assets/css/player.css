@@ -193,6 +193,35 @@ ul.vjs-menu-content::-webkit-scrollbar {
   z-index: 0;
 }
 
+/* SponsorBlock segment markers */
+.vjs-marker.sponsorblock-sponsor      { background-color: #00d400; }
+.vjs-marker.sponsorblock-selfpromo    { background-color: #ffff00; }
+.vjs-marker.sponsorblock-interaction  { background-color: #cc00ff; }
+.vjs-marker.sponsorblock-intro        { background-color: #00ffff; }
+.vjs-marker.sponsorblock-outro        { background-color: #0202ed; }
+.vjs-marker.sponsorblock-preview      { background-color: #008fd6; }
+.vjs-marker.sponsorblock-music_offtopic { background-color: #ff9900; }
+.vjs-marker.sponsorblock-filler       { background-color: #7300ab; }
+
+/* SponsorBlock skip toast */
+.sponsorblock-notice {
+  position: absolute;
+  bottom: 4em;
+  right: 1em;
+  background: rgba(20, 20, 20, 0.85);
+  color: #fff;
+  padding: 0.4em 0.9em;
+  border-radius: 4px;
+  font-size: 0.85em;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s;
+  z-index: 10;
+}
+.sponsorblock-notice.visible {
+  opacity: 1;
+}
+
 /* Big "Play" Button */
 .video-js .vjs-big-play-button {
   background-color: rgba(35, 35, 35, 0.5);
