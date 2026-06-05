@@ -102,31 +102,32 @@ private module Parsers
       view_count = item_contents.dig?("viewCountText", "simpleText").try &.as_s.gsub(/\D+/, "").to_i64? || 0_i64
       description_html = item_contents["descriptionSnippet"]?.try { |t| parse_content(t, video_id) } || ""
 
-      # The length information generally exist in "lengthText". However, the info can sometimes
-      # be retrieved from "thumbnailOverlays" (e.g when the video is a "shorts" one).
-      is_short = false
+      # The most reliable Short indicator is the reelWatchEndpoint navigation endpoint.
+      # YouTube uses watchEndpoint for regular videos and reelWatchEndpoint for Shorts.
+      is_short = item_contents.dig?("navigationEndpoint", "reelWatchEndpoint") != nil
+
+      # Length information generally exists in "lengthText". For Shorts it may be absent
+      # or replaced by a thumbnailOverlay with style "SHORTS".
       if length_container = item_contents["lengthText"]?
         length_seconds = decode_length_seconds(length_container["simpleText"].as_s)
       elsif length_container = item_contents["thumbnailOverlays"]?.try &.as_a.find(&.["thumbnailOverlayTimeStatusRenderer"]?)
-        # This needs to only go down the `simpleText` path (if possible). If more situations came up that requires
-        # a specific pathway then we should add an argument to extract_text that'll make this possible
-        length_text = length_container.dig?("thumbnailOverlayTimeStatusRenderer", "text", "simpleText")
+        overlay_style = length_container.dig?("thumbnailOverlayTimeStatusRenderer", "style").try &.as_s
+        length_text = length_container.dig?("thumbnailOverlayTimeStatusRenderer", "text", "simpleText").try &.as_s
 
-        if length_text
-          length_text = length_text.as_s
-
-          if length_text == "SHORTS"
-            length_seconds = 60_i32
-            is_short = true
-          else
-            length_seconds = decode_length_seconds(length_text)
-          end
+        if overlay_style == "SHORTS" || length_text == "SHORTS"
+          is_short = true
+          length_seconds = 60_i32
+        elsif length_text
+          length_seconds = decode_length_seconds(length_text)
         else
           length_seconds = 0
         end
       else
         length_seconds = 0
       end
+
+      # Approximate to 60s when detected as a Short but no real duration is available
+      length_seconds = 60_i32 if is_short && length_seconds == 0
 
       premiere_timestamp = item_contents.dig?("upcomingEventData", "startTime").try { |t| Time.unix(t.as_s.to_i64) }
       badges = VideoBadges::None
