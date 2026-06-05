@@ -49,9 +49,18 @@ all: invidious
 get-libs:
 	shards install --production
 
-# TODO: add support for ARM64 via cross-compilation
 invidious: get-libs
 	crystal build src/invidious.cr $(FLAGS) --progress --stats --error-trace
+
+# Cross-compile for AMD64 (x86_64-linux-gnu). Run on an AMD64 host to link.
+amd64: get-libs
+	crystal build src/invidious.cr --cross-compile --target x86_64-linux-gnu \
+	  $(FLAGS) --progress --stats --error-trace
+
+# Cross-compile for ARM64 (aarch64-linux-gnu). Run on an ARM64 host to link.
+arm64: get-libs
+	crystal build src/invidious.cr --cross-compile --target aarch64-linux-gnu \
+	  $(FLAGS) --progress --stats --error-trace
 
 
 run: invidious
@@ -101,7 +110,9 @@ help:
 	@echo "Targets available in this Makefile:"
 	@echo ""
 	@echo "  get-libs         Fetch Crystal libraries"
-	@echo "  invidious        Build Invidious"
+	@echo "  invidious        Build Invidious (native architecture)"
+	@echo "  amd64            Cross-compile for AMD64 (x86_64-linux-gnu)"
+	@echo "  arm64            Cross-compile for ARM64 (aarch64-linux-gnu)"
 	@echo "  run              Launch Invidious"
 	@echo ""
 	@echo "  format           Run the Crystal formatter"
@@ -120,9 +131,12 @@ help:
 	@echo ""
 	@echo "  API_ONLY         Build invidious without a GUI   (Default: 0)"
 	@echo "  NO_DBG_SYMBOLS   Strip debug symbols             (Default: 0)"
+	@echo ""
+	@echo "Note: amd64/arm64 targets cross-compile and generate invidious.o,"
+	@echo "      which must be linked on the target system."
 
 
 
 # No targets generates an output named after themselves
-.PHONY: all get-libs build amd64 run
+.PHONY: all get-libs invidious amd64 arm64 run
 .PHONY: format test verify clean distclean help
