@@ -220,6 +220,28 @@ module Invidious::Routes::API::V1::Videos
     work_url = sb.proxied_url.dup
     template_path = sb.proxied_url.path
 
+    # When `domain` isn't configured, HOST_URL is empty and `proxied_url` is
+    # host-less, so the cue URLs come out root-relative (e.g. "/sb/..."). The
+    # videojs-vtt-thumbnails plugin resolves those relative to the VTT file's
+    # directory instead of the site origin, mangling them into
+    # "/api/v1/storyboards/sb/..." which returns nothing. Make the cue URLs
+    # absolute using the request's own origin (same scheme/host the page was
+    # served from, so they stay same-origin for the CSP) to avoid this.
+    if work_url.host.nil? || work_url.host.try(&.empty?)
+      host_header = env.request.headers["X-Forwarded-Host"]? || env.request.headers["Host"]?
+      if host_header
+        work_url.scheme = env.request.headers["X-Forwarded-Proto"]? || "http"
+
+        host_part, sep, port_part = host_header.rpartition(':')
+        if !sep.empty? && (port = port_part.to_i?)
+          work_url.host = host_part
+          work_url.port = port
+        else
+          work_url.host = host_header
+        end
+      end
+    end
+
     # Initialize cue timing variables
     # NOTE: videojs-vtt-thumbnails gets lost when the cue times don't overlap
     # (i.e: if cue[n] end time is 1:06:25.000, cue[n+1] start time should be 1:06:25.000)
