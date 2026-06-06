@@ -15,12 +15,6 @@
             </a>
         <% end %>
     </div>
-    <% if CONFIG.admins.empty? || CONFIG.admins.includes?(user.email) %>
-        <a href="/feed/subscriptions/backfill_shorts" class="pure-button" style="margin-left: 1em"
-           title="Re-check existing feed videos and flag Shorts">
-            <%= I18n.translate(locale, "feed_filter_recheck_shorts_label") %>
-        </a>
-    <% end %>
 </div>
 
 <div class="pure-g h-box">

@@ -298,6 +298,16 @@
                     <input name="filter_shorts" id="filter_shorts" type="checkbox" <% if preferences.filter_shorts %>checked<% end %>>
                 </div>
 
+                <% if CONFIG.admins.empty? || (env.get?("user") && CONFIG.admins.includes? env.get?("user").as(Invidious::User).email) %>
+                <div class="pure-control-group">
+                    <label><%= I18n.translate(locale, "preferences_recheck_shorts_label") %></label>
+                    <a href="/feed/subscriptions/backfill_shorts" class="pure-button"
+                       title="One-time: re-check existing feed videos and flag Shorts. The feed already detects new Shorts automatically.">
+                        <%= I18n.translate(locale, "feed_filter_recheck_shorts_label") %>
+                    </a>
+                </div>
+                <% end %>
+
                 <% if CONFIG.enable_user_notifications %>
                 <div class="pure-control-group">
                     <label for="notifications_only"><%= I18n.translate(locale, "preferences_notifications_only_label") %></label>
