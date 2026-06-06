@@ -131,30 +131,26 @@
                 <input name="watch_mark_threshold" id="watch_mark_threshold" type="number" min="0" max="100" step="1" value="<%= preferences.watch_mark_threshold %>">
             </div>
 
-            <fieldset class="pure-group">
-                <legend><%= I18n.translate(locale, "DeArrow: crowd-sourced titles & thumbnails") %></legend>
-                <div class="pure-control-group">
-                    <label for="dearrow_titles"><%= I18n.translate(locale, "Replace titles: ") %></label>
-                    <input name="dearrow_titles" id="dearrow_titles" type="checkbox" <% if preferences.dearrow_titles %>checked<% end %>>
-                </div>
-                <div class="pure-control-group">
-                    <label for="dearrow_thumbnails"><%= I18n.translate(locale, "Replace thumbnails: ") %></label>
-                    <input name="dearrow_thumbnails" id="dearrow_thumbnails" type="checkbox" <% if preferences.dearrow_thumbnails %>checked<% end %>>
-                </div>
-            </fieldset>
+            <legend><%= I18n.translate(locale, "DeArrow: crowd-sourced titles & thumbnails") %></legend>
+            <div class="pure-control-group">
+                <label for="dearrow_titles"><%= I18n.translate(locale, "Replace titles: ") %></label>
+                <input name="dearrow_titles" id="dearrow_titles" type="checkbox" <% if preferences.dearrow_titles %>checked<% end %>>
+            </div>
+            <div class="pure-control-group">
+                <label for="dearrow_thumbnails"><%= I18n.translate(locale, "Replace thumbnails: ") %></label>
+                <input name="dearrow_thumbnails" id="dearrow_thumbnails" type="checkbox" <% if preferences.dearrow_thumbnails %>checked<% end %>>
+            </div>
 
-            <fieldset class="pure-group">
-                <legend><%= I18n.translate(locale, "SponsorBlock: skip categories") %></legend>
-                <% {"sponsor" => "Sponsor", "selfpromo" => "Self-promotion", "interaction" => "Interaction reminder",
-                    "intro" => "Intro", "outro" => "Outro", "preview" => "Preview/recap",
-                    "music_offtopic" => "Non-music (music videos)", "filler" => "Filler/tangent"}.each do |cat, label| %>
-                    <div class="pure-control-group">
-                        <label for="sponsorblock_<%= cat %>"><%= label %></label>
-                        <input name="sponsorblock_<%= cat %>" id="sponsorblock_<%= cat %>" type="checkbox"
-                            <% if preferences.sponsorblock_categories.includes?(cat) %>checked<% end %>>
-                    </div>
-                <% end %>
-            </fieldset>
+            <legend><%= I18n.translate(locale, "SponsorBlock: skip categories") %></legend>
+            <% {"sponsor" => "Sponsor", "selfpromo" => "Self-promotion", "interaction" => "Interaction reminder",
+                "intro" => "Intro", "outro" => "Outro", "preview" => "Preview/recap",
+                "music_offtopic" => "Non-music (music videos)", "filler" => "Filler/tangent"}.each do |cat, label| %>
+                <div class="pure-control-group">
+                    <label for="sponsorblock_<%= cat %>"><%= label %></label>
+                    <input name="sponsorblock_<%= cat %>" id="sponsorblock_<%= cat %>" type="checkbox"
+                        <% if preferences.sponsorblock_categories.includes?(cat) %>checked<% end %>>
+                </div>
+            <% end %>
 
             <% if user = env.get?("user").try &.as(User) %>
                 <% playlists = Invidious::Database::Playlists.select_user_created_playlists(user.email) %>
