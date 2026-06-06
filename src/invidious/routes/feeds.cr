@@ -465,6 +465,13 @@ module Invidious::Routes::Feeds
 
         was_insert = Invidious::Database::ChannelVideos.insert(video, with_premiere_timestamp: true)
         if was_insert
+          # Authoritative Short check for the newly-seen video if the cheap
+          # Shorts-tab lookup didn't already flag it.
+          if !video.is_short && video_is_short?(id)
+            video.is_short = true
+            Invidious::Database::ChannelVideos.insert(video, with_premiere_timestamp: true)
+          end
+
           NOTIFICATION_CHANNEL.send(VideoNotification.from_video(video))
         end
       end

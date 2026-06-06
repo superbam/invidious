@@ -102,9 +102,16 @@ private module Parsers
       view_count = item_contents.dig?("viewCountText", "simpleText").try &.as_s.gsub(/\D+/, "").to_i64? || 0_i64
       description_html = item_contents["descriptionSnippet"]?.try { |t| parse_content(t, video_id) } || ""
 
-      # The most reliable Short indicator is the reelWatchEndpoint navigation endpoint.
-      # YouTube uses watchEndpoint for regular videos and reelWatchEndpoint for Shorts.
-      is_short = item_contents.dig?("navigationEndpoint", "reelWatchEndpoint") != nil
+      # Short detection mirrors NewPipe's isShortFormContent(): several OR'd
+      # signals, since no single one is always present.
+      #  1. navigationEndpoint webPageType == WEB_PAGE_TYPE_SHORTS
+      #  2. navigationEndpoint has a reelWatchEndpoint
+      #  3. a thumbnailOverlay flagged as SHORTS (see below)
+      web_page_type = item_contents.dig?(
+        "navigationEndpoint", "commandMetadata", "webCommandMetadata", "webPageType"
+      ).try &.as_s
+      is_short = web_page_type == "WEB_PAGE_TYPE_SHORTS"
+      is_short ||= item_contents.dig?("navigationEndpoint", "reelWatchEndpoint") != nil
 
       # Length information generally exists in "lengthText". For Shorts it may be absent
       # or replaced by a thumbnailOverlay with style "SHORTS".
@@ -113,8 +120,9 @@ private module Parsers
       elsif length_container = item_contents["thumbnailOverlays"]?.try &.as_a.find(&.["thumbnailOverlayTimeStatusRenderer"]?)
         overlay_style = length_container.dig?("thumbnailOverlayTimeStatusRenderer", "style").try &.as_s
         length_text = length_container.dig?("thumbnailOverlayTimeStatusRenderer", "text", "simpleText").try &.as_s
+        overlay_icon = length_container.dig?("thumbnailOverlayTimeStatusRenderer", "icon", "iconType").try &.as_s
 
-        if overlay_style == "SHORTS" || length_text == "SHORTS"
+        if overlay_style == "SHORTS" || length_text == "SHORTS" || overlay_icon.try(&.downcase.includes?("shorts"))
           is_short = true
           length_seconds = 60_i32
         elsif length_text

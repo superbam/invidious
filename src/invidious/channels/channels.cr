@@ -156,6 +156,18 @@ def get_channel(id) : InvidiousChannel
   return channel
 end
 
+# Authoritative Short check, as used by Piped: ask YouTube to resolve the
+# "/shorts/<id>" URL and check whether it hands back a reelWatchEndpoint.
+# Regular videos resolve to a normal watchEndpoint instead. This works from
+# just a video ID, without the video appearing in any tab or RSS marker.
+def video_is_short?(video_id : String) : Bool
+  response = YoutubeAPI.resolve_url("https://www.youtube.com/shorts/#{video_id}")
+  return response.dig?("endpoint", "reelWatchEndpoint") != nil
+rescue ex
+  LOGGER.trace("video_is_short?: #{video_id} : #{ex.message}")
+  return false
+end
+
 def fetch_channel(ucid, pull_all_videos : Bool)
   LOGGER.debug("fetch_channel: #{ucid}")
   LOGGER.trace("fetch_channel: #{ucid} : pull_all_videos = #{pull_all_videos}")
@@ -264,6 +276,13 @@ def fetch_channel(ucid, pull_all_videos : Bool)
     was_insert = Invidious::Database::ChannelVideos.insert(video)
 
     if was_insert
+      # Only newly-seen videos that the cheap tab signals didn't already flag
+      # get the authoritative (but per-video) resolve_url Short check.
+      if !is_short && video_is_short?(video_id)
+        video.is_short = true
+        Invidious::Database::ChannelVideos.insert(video)
+      end
+
       LOGGER.trace("fetch_channel: #{ucid} : video #{video_id} : Inserted, updating subscriptions")
       NOTIFICATION_CHANNEL.send(VideoNotification.from_video(video))
     else
