@@ -91,7 +91,13 @@ module Invidious::Routes::Feeds
     page = env.params.query["page"]?.try &.to_i?
     page ||= 1
 
-    videos, notifications = get_subscription_feed(user, max_results, page)
+    # Feed view filter: "videos", "shorts" or "all". When absent, fall back
+    # to the user's filter_shorts preference (handled in get_subscription_feed).
+    current_view = env.params.query["view"]?
+    current_view = nil unless {"videos", "shorts", "all"}.includes?(current_view)
+    current_view ||= user.preferences.filter_shorts ? "videos" : "all"
+
+    videos, notifications = get_subscription_feed(user, max_results, page, current_view)
 
     if CONFIG.enable_user_notifications
       # "updated" here is used for delivering new notifications, so if
@@ -103,9 +109,10 @@ module Invidious::Routes::Feeds
     end
     env.set "user", user
 
-    # Used for pagination links
-    base_url = "/feed/subscriptions"
-    base_url += "?max_results=#{max_results}" if env.params.query.has_key?("max_results")
+    # Used for pagination links. Keep the active view so pagination stays
+    # within the same filter.
+    base_url = "/feed/subscriptions?view=#{current_view}"
+    base_url += "&max_results=#{max_results}" if env.params.query.has_key?("max_results")
 
     templated "feeds/subscriptions"
   end

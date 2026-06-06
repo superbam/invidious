@@ -493,6 +493,7 @@
     "error_video_not_in_playlist": "The requested video doesn't exist in this playlist. <a href=\"`x`\">Click here for the playlist home page.</a>",
     "channel_tab_videos_label": "Videos",
     "channel_tab_shorts_label": "Shorts",
+    "feed_filter_all_label": "All",
     "channel_tab_streams_label": "Livestreams",
     "channel_tab_podcasts_label": "Podcasts",
     "channel_tab_releases_label": "Releases",

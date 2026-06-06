@@ -22,7 +22,7 @@ def create_user(sid, email, password)
   return user, sid
 end
 
-def get_subscription_feed(user, max_results = 40, page = 1)
+def get_subscription_feed(user, max_results = 40, page = 1, shorts_view : String? = nil)
   limit = max_results.clamp(0, MAX_ITEMS_PER_PAGE)
   offset = (page - 1) * limit
 
@@ -102,9 +102,20 @@ def get_subscription_feed(user, max_results = 40, page = 1)
     videos = videos - notifications
   end
 
-  if user.preferences.filter_shorts
+  # An explicit "view" (Videos / Shorts / All) wins over the user's
+  # filter_shorts preference. When no view is given, fall back to the
+  # preference: filter_shorts hides Shorts, otherwise everything is shown.
+  shorts_view ||= user.preferences.filter_shorts ? "videos" : "all"
+
+  case shorts_view
+  when "videos"
     videos = videos.reject(&.is_short)
     notifications = notifications.reject(&.is_short)
+  when "shorts"
+    videos = videos.select(&.is_short)
+    notifications = notifications.select(&.is_short)
+  else
+    # "all": no filtering
   end
 
   return videos, notifications
