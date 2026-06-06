@@ -152,6 +152,14 @@ module Invidious::Routes::PreferencesRoute
       end
     end
 
+    dearrow_titles = env.params.body["dearrow_titles"]?.try &.as(String)
+    dearrow_titles ||= "off"
+    dearrow_titles = dearrow_titles == "on"
+
+    dearrow_thumbnails = env.params.body["dearrow_thumbnails"]?.try &.as(String)
+    dearrow_thumbnails ||= "off"
+    dearrow_thumbnails = dearrow_thumbnails == "on"
+
     notifications_only = env.params.body["notifications_only"]?.try &.as(String)
     notifications_only ||= "off"
     notifications_only = notifications_only == "on"
@@ -194,6 +202,8 @@ module Invidious::Routes::PreferencesRoute
       unseen_only:                 unseen_only,
       filter_shorts:               filter_shorts,
       sponsorblock_categories:     sponsorblock_categories,
+      dearrow_titles:              dearrow_titles,
+      dearrow_thumbnails:          dearrow_thumbnails,
       video_loop:                  video_loop,
       volume:                      volume,
       extend_desc:                 extend_desc,

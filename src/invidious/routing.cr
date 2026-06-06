@@ -252,6 +252,8 @@ module Invidious::Routing
       get "/api/v1/clips/:id", {{namespace}}::Videos, :clips
       get "/api/v1/transcripts/:id", {{namespace}}::Videos, :transcripts
       get "/api/v1/sponsorblock/timings/:id", {{namespace}}::SponsorBlock, :timings
+      get "/api/v1/dearrow/branding/:id",    {{namespace}}::SponsorBlock, :branding
+      get "/api/v1/dearrow/thumbnail/:id",   {{namespace}}::SponsorBlock, :thumbnail
 
       # Feeds
       get "/api/v1/trending", {{namespace}}::Feeds, :trending

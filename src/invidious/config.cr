@@ -48,6 +48,8 @@ struct ConfigPreferences
   property unseen_only : Bool = false
   property filter_shorts : Bool = false
   property sponsorblock_categories : Array(String) = [] of String
+  property dearrow_titles : Bool = false
+  property dearrow_thumbnails : Bool = false
   property video_loop : Bool = false
   property extend_desc : Bool = false
   property volume : Int32 = 100
@@ -153,6 +155,11 @@ class Config
   # URL to the modified source code to be easily AGPL compliant
   # Will display in the footer, next to the main source code link
   property modified_source_code_url : String? = nil
+
+  # SponsorBlock / DeArrow server URLs (allow self-hosted instances)
+  property sponsorblock_url : String = "https://sponsor.ajay.app"
+  property dearrow_url : String = "https://sponsor.ajay.app"
+  property dearrow_thumb_url : String = "https://dearrow-thumb.ajay.app"
 
   # Connect to YouTube over 'ipv6', 'ipv4'. Will sometimes resolve fix issues with rate-limiting (see https://github.com/ytdl-org/youtube-dl/issues/21729)
   @[YAML::Field(converter: Preferences::FamilyConverter)]

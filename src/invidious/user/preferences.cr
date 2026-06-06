@@ -57,6 +57,8 @@ struct Preferences
   @[JSON::Field(converter: Preferences::StringToArray)]
   @[YAML::Field(converter: Preferences::StringToArray)]
   property sponsorblock_categories : Array(String) = CONFIG.default_user_preferences.sponsorblock_categories
+  property dearrow_titles : Bool = CONFIG.default_user_preferences.dearrow_titles
+  property dearrow_thumbnails : Bool = CONFIG.default_user_preferences.dearrow_thumbnails
   property video_loop : Bool = CONFIG.default_user_preferences.video_loop
   property extend_desc : Bool = CONFIG.default_user_preferences.extend_desc
   property volume : Int32 = CONFIG.default_user_preferences.volume

@@ -178,6 +178,51 @@ if (video_data.play_next) {
     });
 }
 
+// DeArrow — apply crowd-sourced title and/or thumbnail on the watch page
+if (video_data.dearrow_titles || video_data.dearrow_thumbnails) {
+    helpers.xhr('GET', '/api/v1/dearrow/branding/' + video_data.id, {
+        responseType: 'json',
+        timeout: 8000,
+        entity_name: 'dearrow',
+    }, {
+        on200: function (data) {
+            if (video_data.dearrow_titles) {
+                var best = (data.titles || []).find(function (t) {
+                    return !t.original && t.votes >= 0;
+                });
+                if (best) {
+                    // Strip DeArrow formatting markers (leading '>' on words)
+                    var clean = best.title.split(' ').map(function (w) {
+                        return w.startsWith('>') ? w.slice(1) : w;
+                    }).join(' ').trim();
+
+                    if (clean) {
+                        // Replace the visible <h1> while keeping the audio/video link intact
+                        var h1 = document.querySelector('h1');
+                        if (h1) {
+                            var link = h1.querySelector('a');
+                            h1.textContent = clean + ' ';
+                            if (link) h1.appendChild(link);
+                        }
+                        document.title = clean + ' - Invidious';
+                    }
+                }
+            }
+
+            if (video_data.dearrow_thumbnails) {
+                var best_thumb = (data.thumbnails || []).find(function (t) {
+                    return !t.original && t.votes >= 0 && t.timestamp != null;
+                });
+                if (best_thumb) {
+                    var thumb_url = '/api/v1/dearrow/thumbnail/' + video_data.id +
+                                    '?time=' + best_thumb.timestamp;
+                    player.poster(thumb_url);
+                }
+            }
+        },
+    });
+}
+
 addEventListener('load', function (e) {
     if (video_data.plid)
         get_playlist(video_data.plid);

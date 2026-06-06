@@ -127,6 +127,18 @@
             </div>
 
             <fieldset class="pure-group">
+                <legend><%= I18n.translate(locale, "DeArrow: crowd-sourced titles & thumbnails") %></legend>
+                <div class="pure-control-group">
+                    <label for="dearrow_titles"><%= I18n.translate(locale, "Replace titles: ") %></label>
+                    <input name="dearrow_titles" id="dearrow_titles" type="checkbox" <% if preferences.dearrow_titles %>checked<% end %>>
+                </div>
+                <div class="pure-control-group">
+                    <label for="dearrow_thumbnails"><%= I18n.translate(locale, "Replace thumbnails: ") %></label>
+                    <input name="dearrow_thumbnails" id="dearrow_thumbnails" type="checkbox" <% if preferences.dearrow_thumbnails %>checked<% end %>>
+                </div>
+            </fieldset>
+
+            <fieldset class="pure-group">
                 <legend><%= I18n.translate(locale, "SponsorBlock: skip categories") %></legend>
                 <% {"sponsor" => "Sponsor", "selfpromo" => "Self-promotion", "interaction" => "Interaction reminder",
                     "intro" => "Intro", "outro" => "Outro", "preview" => "Preview/recap",
