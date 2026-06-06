@@ -133,6 +133,29 @@ module Invidious::Database::ChannelVideos
     return PG_DB.query_all(request, ids, as: ChannelVideo)
   end
 
+  # Recent videos for the given channels that aren't yet flagged as Shorts.
+  # Used by the Shorts backfill to re-check existing feed rows.
+  def select_not_short(ucids : Array(String), limit : Int32) : Array(ChannelVideo)
+    return [] of ChannelVideo if ucids.empty?
+
+    request = <<-SQL
+      SELECT * FROM channel_videos
+      WHERE ucid = ANY($1) AND is_short = false
+      ORDER BY published DESC
+      LIMIT $2
+    SQL
+
+    return PG_DB.query_all(request, ucids, limit, as: ChannelVideo)
+  end
+
+  # -------------------
+  #  Update
+  # -------------------
+
+  def mark_short(id : String)
+    PG_DB.exec("UPDATE channel_videos SET is_short = true WHERE id = $1", id)
+  end
+
   def select_notfications(ucid : String, since : Time) : Array(ChannelVideo)
     request = <<-SQL
       SELECT * FROM channel_videos
