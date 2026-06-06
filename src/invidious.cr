@@ -145,6 +145,10 @@ LOGGER = Invidious::LogHandler.new(OUTPUT, CONFIG.log_level, CONFIG.colorize_log
 # Check table integrity
 Invidious::Database.check_integrity(CONFIG)
 
+# Apply feature-required schema additions that aren't covered by
+# check_tables (off by default) or migrations (manual `--migrate`).
+Invidious::Database.ensure_feature_columns
+
 {% if !flag?(:skip_videojs_download) %}
   # Resolve player dependencies. This is done at compile time.
   #

@@ -122,6 +122,36 @@ module Invidious::Database
     end
   end
 
+  # Applies schema additions that features depend on, regardless of the
+  # `check_tables` setting (which is off by default). Each statement is
+  # idempotent, so this is safe to run on every boot.
+  #
+  # Without this, instances that don't run `--migrate` or enable
+  # `check_tables` never get the `is_short` column, and anything that reads
+  # it (Shorts filtering, the subscription feed view) fails with
+  # "column \"is_short\" does not exist".
+  def ensure_feature_columns
+    begin
+      already_present = PG_DB.query_one(
+        "SELECT EXISTS (SELECT 1 FROM information_schema.columns " \
+        "WHERE table_name = 'channel_videos' AND column_name = 'is_short')",
+        as: Bool
+      )
+
+      return if already_present
+
+      LOGGER.info("ensure_feature_columns: ALTER TABLE channel_videos ADD COLUMN is_short")
+      PG_DB.exec("ALTER TABLE channel_videos ADD COLUMN IF NOT EXISTS is_short boolean DEFAULT false")
+
+      # The per-user subscription materialized views snapshot columns at
+      # creation (SELECT cv.*), so they're now stale. Flag every feed for
+      # update; RefreshFeedsJob drops and recreates stale views automatically.
+      PG_DB.exec("UPDATE users SET feed_needs_update = true")
+    rescue ex
+      LOGGER.error("ensure_feature_columns: channel_videos.is_short : #{ex.message}")
+    end
+  end
+
   def get_column_array(db, table_name)
     column_array = [] of String
     PG_DB.query("SELECT * FROM #{table_name} LIMIT 0") do |rs|
