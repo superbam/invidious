@@ -198,6 +198,18 @@ def fetch_channel(ucid, pull_all_videos : Bool)
   LOGGER.trace("fetch_channel: #{ucid} : Downloading channel videos page")
   videos, continuation = IV::Channel::Tabs.get_videos(channel)
 
+  # Shorts are not listed in the "Videos" tab (nor flagged in the RSS feed),
+  # so fetch the "Shorts" tab separately to know which RSS entries are Shorts.
+  short_ids = Set(String).new
+  begin
+    LOGGER.trace("fetch_channel: #{ucid} : Downloading channel shorts page")
+    shorts, _ = IV::Channel::Tabs.get_shorts(channel)
+    shorts.select(SearchVideo).each { |v| short_ids << v.id }
+  rescue ex
+    # The channel may not have a "Shorts" tab, or it failed to load.
+    LOGGER.trace("fetch_channel: #{ucid} : Could not fetch shorts: #{ex.message}")
+  end
+
   LOGGER.trace("fetch_channel: #{ucid} : Extracting videos from channel RSS feed")
   rss.xpath_nodes("//default:feed/default:entry", namespaces).each do |entry|
     video_id = entry.xpath_node("yt:videoId", namespaces).not_nil!.content
@@ -227,8 +239,7 @@ def fetch_channel(ucid, pull_all_videos : Bool)
     live_now = channel_video.try &.badges.live_now?
     live_now ||= false
 
-    is_short = channel_video.try &.badges.short?
-    is_short ||= false
+    is_short = channel_video.try(&.badges.short?) || short_ids.includes?(video_id)
 
     premiere_timestamp = channel_video.try &.premiere_timestamp
 

@@ -414,6 +414,21 @@ module Invidious::Routes::Feeds
         "yt"      => "http://www.youtube.com/xml/schemas/2015",
         "default" => "http://www.w3.org/2005/Atom",
       }
+      # Shorts are not flagged in the RSS feed, so look up each channel's
+      # "Shorts" tab (memoized per channel) to detect them.
+      short_ids = Hash(String, Set(String)).new do |cache, channel_ucid|
+        ids = Set(String).new
+        begin
+          # The author name is only used as a display fallback on the extracted
+          # items; we only read their IDs here, so an empty fallback is fine.
+          shorts, _ = IV::Channel::Tabs.get_shorts("", channel_ucid)
+          shorts.select(SearchVideo).each { |v| ids << v.id }
+        rescue ex
+          LOGGER.trace("/feed/webhook : #{channel_ucid} : Could not fetch shorts: #{ex.message}")
+        end
+        cache[channel_ucid] = ids
+      end
+
       rss = XML.parse(body)
       rss.xpath_nodes("//default:feed/default:entry", namespaces).each do |entry|
         id = entry.xpath_node("yt:videoId", namespaces).not_nil!.content
@@ -438,7 +453,7 @@ module Invidious::Routes::Feeds
           live_now:           video.live_now,
           premiere_timestamp: video.premiere_timestamp,
           views:              video.views,
-          is_short:           false,
+          is_short:           short_ids[video.ucid].includes?(id),
         })
 
         was_insert = Invidious::Database::ChannelVideos.insert(video, with_premiere_timestamp: true)
