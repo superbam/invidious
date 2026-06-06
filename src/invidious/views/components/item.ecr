@@ -131,7 +131,9 @@
 
                         <% if item_watched %>
                             <div class="watched-overlay"></div>
-                            <div class="watched-indicator" data-length="<%= item.length_seconds %>" data-id="<%= item.id %>"></div>
+                            <div class="watched-indicator" data-length="<%= item.length_seconds %>" data-id="<%= item.id %>" data-watched="1"></div>
+                        <% else %>
+                            <div class="watched-indicator" data-length="<%= item.length_seconds %>" data-id="<%= item.id %>" style="display:none"></div>
                         <% end %>
                     </a>
                 <%- else -%>

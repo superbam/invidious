@@ -388,6 +388,32 @@ if (video_data.params.save_player_pos) {
 }
 else remove_all_video_times();
 
+// Mark the video as watched once playback passes the configured threshold
+// (a percentage of the duration). A threshold of 0 means it was already
+// marked server-side on page load, so there is nothing to do here.
+if (video_data.mark_watched_enabled && video_data.csrf_token &&
+    video_data.params.watch_mark_threshold > 0) {
+    let watched_marked = false;
+    const watched_threshold_frac = video_data.params.watch_mark_threshold / 100;
+
+    player.on('timeupdate', function () {
+        if (watched_marked) return;
+
+        const duration = player.duration();
+        if (!duration || !isFinite(duration)) return;
+
+        if (player.currentTime() / duration >= watched_threshold_frac) {
+            watched_marked = true;
+
+            const url = '/watch_ajax?action=mark_watched&redirect=false&id=' + video_data.id;
+            helpers.xhr('POST', url, {payload: 'csrf_token=' + video_data.csrf_token}, {
+                onNon200: function () { watched_marked = false; },
+                onError: function () { watched_marked = false; }
+            });
+        }
+    });
+}
+
 if (video_data.params.autoplay) {
     var bpb = player.getChild('bigPlayButton');
     bpb.hide();

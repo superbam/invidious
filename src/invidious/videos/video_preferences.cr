@@ -28,6 +28,7 @@ module Invidious::Videos
     property volume : Int32
     property vr_mode : Bool
     property save_player_pos : Bool
+    property watch_mark_threshold : Int32
   end
 
   def process_video_params(query, preferences)
@@ -51,6 +52,7 @@ module Invidious::Videos
     volume = query["volume"]?.try &.to_i?
     vr_mode = query["vr_mode"]?.try { |q| (q == "true" || q == "1").to_unsafe }
     save_player_pos = query["save_player_pos"]?.try { |q| (q == "true" || q == "1").to_unsafe }
+    watch_mark_threshold = query["watch_mark_threshold"]?.try &.to_i?
 
     if preferences
       # region ||= preferences.region
@@ -73,6 +75,7 @@ module Invidious::Videos
       volume ||= preferences.volume
       vr_mode ||= preferences.vr_mode.to_unsafe
       save_player_pos ||= preferences.save_player_pos.to_unsafe
+      watch_mark_threshold ||= preferences.watch_mark_threshold
     end
 
     annotations ||= CONFIG.default_user_preferences.annotations.to_unsafe
@@ -94,6 +97,8 @@ module Invidious::Videos
     volume ||= CONFIG.default_user_preferences.volume
     vr_mode ||= CONFIG.default_user_preferences.vr_mode.to_unsafe
     save_player_pos ||= CONFIG.default_user_preferences.save_player_pos.to_unsafe
+    watch_mark_threshold ||= CONFIG.default_user_preferences.watch_mark_threshold
+    watch_mark_threshold = watch_mark_threshold.clamp(0, 100)
 
     annotations = annotations == 1
     preload = preload == 1
@@ -159,6 +164,7 @@ module Invidious::Videos
       volume:             volume,
       vr_mode:            vr_mode,
       save_player_pos:    save_player_pos,
+      watch_mark_threshold: watch_mark_threshold,
     })
 
     return params

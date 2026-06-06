@@ -63,6 +63,7 @@ struct Preferences
   property extend_desc : Bool = CONFIG.default_user_preferences.extend_desc
   property volume : Int32 = CONFIG.default_user_preferences.volume
   property save_player_pos : Bool = CONFIG.default_user_preferences.save_player_pos
+  property watch_mark_threshold : Int32 = CONFIG.default_user_preferences.watch_mark_threshold
   property default_playlist : String? = nil
   property search_privacy : Bool = CONFIG.default_user_preferences.search_privacy
 

@@ -67,7 +67,10 @@ module Invidious::Routes::Watch
     end
     env.params.query.delete_all("iv_load_policy")
 
-    if watched && preferences.watch_history
+    # When a "mark as watched" threshold is configured, the video is marked
+    # watched client-side once playback crosses that point (see player.js).
+    # Only mark on page load when the threshold is 0 ("mark on open").
+    if watched && preferences.watch_history && preferences.watch_mark_threshold <= 0
       Invidious::Database::Users.mark_watched(user.as(User), id)
     end
 

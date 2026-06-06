@@ -81,6 +81,10 @@ module Invidious::Routes::PreferencesRoute
     save_player_pos ||= "off"
     save_player_pos = save_player_pos == "on"
 
+    watch_mark_threshold = env.params.body["watch_mark_threshold"]?.try &.as(String).to_i?
+    watch_mark_threshold ||= CONFIG.default_user_preferences.watch_mark_threshold
+    watch_mark_threshold = watch_mark_threshold.clamp(0, 100)
+
     show_nick = env.params.body["show_nick"]?.try &.as(String)
     show_nick ||= "off"
     show_nick = show_nick == "on"
@@ -210,6 +214,7 @@ module Invidious::Routes::PreferencesRoute
       vr_mode:                     vr_mode,
       show_nick:                   show_nick,
       save_player_pos:             save_player_pos,
+      watch_mark_threshold:        watch_mark_threshold,
       default_playlist:            default_playlist,
       search_privacy:              search_privacy,
     }.to_json)

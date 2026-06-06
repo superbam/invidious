@@ -126,6 +126,11 @@
                 <input name="save_player_pos" id="save_player_pos" type="checkbox" <% if preferences.save_player_pos %>checked<% end %>>
             </div>
 
+            <div class="pure-control-group">
+                <label for="watch_mark_threshold"><%= I18n.translate(locale, "preferences_watch_mark_threshold_label") %></label>
+                <input name="watch_mark_threshold" id="watch_mark_threshold" type="number" min="0" max="100" step="1" value="<%= preferences.watch_mark_threshold %>">
+            </div>
+
             <fieldset class="pure-group">
                 <legend><%= I18n.translate(locale, "DeArrow: crowd-sourced titles & thumbnails") %></legend>
                 <div class="pure-control-group">
