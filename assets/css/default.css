@@ -203,6 +203,9 @@ div.thumbnail {
   position: relative;
   width: 100%;
   box-sizing: border-box;
+  border-radius: 12px;
+  /* Clip the image, watched overlay and progress bar to the rounded corners */
+  overflow: hidden;
 }
 
 img.thumbnail {
@@ -210,11 +213,13 @@ img.thumbnail {
   width: 100%;
   object-fit: cover;
   aspect-ratio: 16 / 9;
+  border-radius: 12px;
 }
 
 .thumbnail-placeholder {
   min-height: 50px;
   border: 2px dotted;
+  border-radius: 12px;
 }
 
 div.watched-overlay {
