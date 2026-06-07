@@ -127,7 +127,7 @@
             <div class="thumbnail">
                 <%- if !thin_mode -%>
                     <a tabindex="-1" href="<%= link_url %>">
-                        <img loading="lazy" class="thumbnail" src="/vi/<%= item.id %>/mqdefault.jpg" alt="" />
+                        <img loading="lazy" class="thumbnail" src="/vi/<%= item.id %>/mqdefault.jpg" srcset="/vi/<%= item.id %>/mqdefault.jpg 320w, /vi/<%= item.id %>/hqdefault.jpg 480w" sizes="(max-width: 767px) 100vw, 25vw" alt="" />
 
                         <% if item_watched %>
                             <div class="watched-overlay"></div>

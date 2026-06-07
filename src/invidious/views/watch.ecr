@@ -332,7 +332,7 @@ we're going to need to do it here in order to allow for translations.
                             <div class="thumbnail">
                                 <%- if !env.get("preferences").as(Preferences).thin_mode -%>
                                     <a tabindex="-1" href="/watch?v=<%= rv["id"] %>&listen=<%= params.listen %>">
-                                        <img loading="lazy" class="thumbnail" src="/vi/<%= rv["id"] %>/mqdefault.jpg" alt="" />
+                                        <img loading="lazy" class="thumbnail" src="/vi/<%= rv["id"] %>/mqdefault.jpg" srcset="/vi/<%= rv["id"] %>/mqdefault.jpg 320w, /vi/<%= rv["id"] %>/hqdefault.jpg 480w" sizes="(max-width: 767px) 100vw, 20vw" alt="" />
                                     </a>
                                 <%- else -%>
                                     <div class="thumbnail-placeholder"></div>
