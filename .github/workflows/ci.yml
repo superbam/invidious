@@ -7,6 +7,7 @@ on:
     branches:
       - "master"
       - "api-only"
+      - "shorts-filter" # shorts-filter: run CI (incl. Shorts smoke test) on merge pushes
   pull_request:
     branches: "*"
     paths-ignore:

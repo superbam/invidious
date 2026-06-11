@@ -91,11 +91,13 @@ module Invidious::Routes::Feeds
     page = env.params.query["page"]?.try &.to_i?
     page ||= 1
 
+    # >>> shorts-filter
     # Feed view filter: "videos", "shorts" or "all". When absent, fall back
     # to the user's filter_shorts preference (handled in get_subscription_feed).
     current_view = env.params.query["view"]?
     current_view = nil unless {"videos", "shorts", "all"}.includes?(current_view)
     current_view ||= user.preferences.filter_shorts ? "videos" : "all"
+    # <<< shorts-filter
 
     videos, notifications = get_subscription_feed(user, max_results, page, current_view)
 
@@ -109,53 +111,17 @@ module Invidious::Routes::Feeds
     end
     env.set "user", user
 
+    # >>> shorts-filter (upstream: base_url = "/feed/subscriptions" then "?max_results=...")
     # Used for pagination links. Keep the active view so pagination stays
     # within the same filter.
     base_url = "/feed/subscriptions?view=#{current_view}"
     base_url += "&max_results=#{max_results}" if env.params.query.has_key?("max_results")
+    # <<< shorts-filter
 
     templated "feeds/subscriptions"
   end
 
-  # One-off backfill: re-check existing subscription-feed rows that predate
-  # reliable Short detection and flag the ones that are actually Shorts.
-  # Runs in the background (each check is a network request) and logs progress.
-  def self.backfill_shorts(env)
-    locale = env.get("preferences").as(Preferences).locale
-
-    user = env.get? "user"
-    referer = get_referer(env, "/feed/subscriptions")
-    return env.redirect referer if !user
-    user = user.as(User)
-
-    # On instances that define admins, restrict the backfill to them. On a
-    # personal instance with no admins configured, any logged-in user may run it.
-    if !CONFIG.admins.empty? && !CONFIG.admins.includes?(user.email)
-      return error_template(403, "Only an administrator can run the Shorts backfill.")
-    end
-
-    limit = env.params.query["limit"]?.try &.to_i?.try &.clamp(1, 5000)
-    limit ||= 1000
-
-    videos = Invidious::Database::ChannelVideos.select_not_short(user.subscriptions, limit)
-
-    spawn do
-      marked = 0
-      videos.each do |video|
-        if video_is_short?(video.id)
-          Invidious::Database::ChannelVideos.mark_short(video.id)
-          marked += 1
-        end
-        # Be gentle on the InnerTube endpoint.
-        sleep 200.milliseconds
-      end
-      LOGGER.info("backfill_shorts: #{user.email} : marked #{marked}/#{videos.size} videos as Shorts")
-    end
-
-    env.response.content_type = "text/html"
-    %(<p>Shorts backfill started for #{videos.size} videos. This runs in the background; \
-refresh your feed shortly. <a href="#{referer}">Back to subscriptions</a>.</p>)
-  end
+  # shorts-filter: self.backfill_shorts moved to routes/feeds_shorts.cr
 
   def self.history(env)
     locale = env.get("preferences").as(Preferences).locale
@@ -461,6 +427,7 @@ refresh your feed shortly. <a href="#{referer}">Back to subscriptions</a>.</p>)
         "yt"      => "http://www.youtube.com/xml/schemas/2015",
         "default" => "http://www.w3.org/2005/Atom",
       }
+      # >>> shorts-filter
       # Shorts are not flagged in the RSS feed, so look up each channel's
       # "Shorts" tab (memoized per channel) to detect them.
       short_ids = Hash(String, Set(String)).new do |cache, channel_ucid|
@@ -475,6 +442,7 @@ refresh your feed shortly. <a href="#{referer}">Back to subscriptions</a>.</p>)
         end
         cache[channel_ucid] = ids
       end
+      # <<< shorts-filter
 
       rss = XML.parse(body)
       rss.xpath_nodes("//default:feed/default:entry", namespaces).each do |entry|
@@ -500,17 +468,19 @@ refresh your feed shortly. <a href="#{referer}">Back to subscriptions</a>.</p>)
           live_now:           video.live_now,
           premiere_timestamp: video.premiere_timestamp,
           views:              video.views,
-          is_short:           short_ids[video.ucid].includes?(id),
+          is_short:           short_ids[video.ucid].includes?(id), # shorts-filter
         })
 
         was_insert = Invidious::Database::ChannelVideos.insert(video, with_premiere_timestamp: true)
         if was_insert
+          # >>> shorts-filter
           # Authoritative Short check for the newly-seen video if the cheap
           # Shorts-tab lookup didn't already flag it.
           if !video.is_short && video_is_short?(id)
             video.is_short = true
             Invidious::Database::ChannelVideos.insert(video, with_premiere_timestamp: true)
           end
+          # <<< shorts-filter
 
           NOTIFICATION_CHANNEL.send(VideoNotification.from_video(video))
         end

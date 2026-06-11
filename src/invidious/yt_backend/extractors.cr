@@ -1,4 +1,5 @@
 require "../helpers/serialized_yt_data"
+require "./shorts" # shorts-filter
 
 # This file contains helper methods to parse the Youtube API json data into
 # neat little packages we can use
@@ -102,31 +103,25 @@ private module Parsers
       view_count = item_contents.dig?("viewCountText", "simpleText").try &.as_s.gsub(/\D+/, "").to_i64? || 0_i64
       description_html = item_contents["descriptionSnippet"]?.try { |t| parse_content(t, video_id) } || ""
 
-      # Short detection mirrors NewPipe's isShortFormContent(): several OR'd
-      # signals, since no single one is always present.
-      #  1. navigationEndpoint webPageType == WEB_PAGE_TYPE_SHORTS
-      #  2. navigationEndpoint has a reelWatchEndpoint
-      #  3. a thumbnailOverlay flagged as SHORTS (see below)
-      web_page_type = item_contents.dig?(
-        "navigationEndpoint", "commandMetadata", "webCommandMetadata", "webPageType"
-      ).try &.as_s
-      is_short = web_page_type == "WEB_PAGE_TYPE_SHORTS"
-      is_short ||= item_contents.dig?("navigationEndpoint", "reelWatchEndpoint") != nil
-
-      # Length information generally exists in "lengthText". For Shorts it may be absent
-      # or replaced by a thumbnailOverlay with style "SHORTS".
+      # The length information generally exist in "lengthText". However, the info can sometimes
+      # be retrieved from "thumbnailOverlays" (e.g when the video is a "shorts" one).
       if length_container = item_contents["lengthText"]?
         length_seconds = decode_length_seconds(length_container["simpleText"].as_s)
       elsif length_container = item_contents["thumbnailOverlays"]?.try &.as_a.find(&.["thumbnailOverlayTimeStatusRenderer"]?)
-        overlay_style = length_container.dig?("thumbnailOverlayTimeStatusRenderer", "style").try &.as_s
-        length_text = length_container.dig?("thumbnailOverlayTimeStatusRenderer", "text", "simpleText").try &.as_s
-        overlay_icon = length_container.dig?("thumbnailOverlayTimeStatusRenderer", "icon", "iconType").try &.as_s
+        # This needs to only go down the `simpleText` path (if possible). If more situations came up that requires
+        # a specific pathway then we should add an argument to extract_text that'll make this possible
+        length_text = length_container.dig?("thumbnailOverlayTimeStatusRenderer", "text", "simpleText")
 
-        if overlay_style == "SHORTS" || length_text == "SHORTS" || overlay_icon.try(&.downcase.includes?("shorts"))
-          is_short = true
-          length_seconds = 60_i32
-        elsif length_text
-          length_seconds = decode_length_seconds(length_text)
+        if length_text
+          length_text = length_text.as_s
+
+          if length_text == "SHORTS"
+            # Approximate length to one minute, as "shorts" generally don't exceed that length.
+            # TODO: Add some sort of metadata for the type of video (normal, live, premiere, shorts)
+            length_seconds = 60_i32
+          else
+            length_seconds = decode_length_seconds(length_text)
+          end
         else
           length_seconds = 0
         end
@@ -134,12 +129,14 @@ private module Parsers
         length_seconds = 0
       end
 
-      # Approximate to 60s when detected as a Short but no real duration is available
+      # >>> shorts-filter: flag Shorts from renderer signals (see Invidious::Shorts)
+      is_short = Invidious::Shorts.detect_in_renderer(item_contents)
       length_seconds = 60_i32 if is_short && length_seconds == 0
+      # <<< shorts-filter
 
       premiere_timestamp = item_contents.dig?("upcomingEventData", "startTime").try { |t| Time.unix(t.as_s.to_i64) }
       badges = VideoBadges::None
-      badges |= VideoBadges::Short if is_short
+      badges |= VideoBadges::Short if is_short # shorts-filter
       item_contents["badges"]?.try &.as_a.each do |badge|
         b = badge["metadataBadgeRenderer"]
         case b["label"]?.try &.as_s
@@ -631,7 +628,7 @@ private module Parsers
         premiere_timestamp: Time.unix(0),
         author_verified:    false,
         author_thumbnail:   nil,
-        badges:             VideoBadges::Short,
+        badges:             VideoBadges::Short, # shorts-filter: reel/shortsLockup items are always Shorts
       })
     end
 
@@ -894,7 +891,7 @@ private module Parsers
         premiere_timestamp: Time.unix(0),
         author_verified:    false,
         author_thumbnail:   nil,
-        badges:             VideoBadges::Short,
+        badges:             VideoBadges::Short, # shorts-filter: reel/shortsLockup items are always Shorts
       })
     end
 
