@@ -22,8 +22,11 @@ upstream  https://github.com/iv-org/invidious.git
 ## Local features (what we add on top of upstream)
 
 - **Shorts filtering** — detect YouTube Shorts and let users hide/show them.
-- **SponsorBlock proxy API** — `src/invidious/routes/api/v1/sponsorblock.cr` (new file).
+- **SponsorBlock + DeArrow proxy API** — `src/invidious/routes/api/v1/sponsorblock.cr` (new file): `/api/v1/sponsorblock/timings/:id`, `/api/v1/dearrow/branding/:id`, `/api/v1/dearrow/thumbnail/:id`.
+- **AirPlay support** — `assets/js/airplay.js` (new file) adds a Safari/WebKit AirPlay button to the video.js control bar; wired in via `player.ecr` (`x-webkit-airplay` attr + script tag) and styled in `player.css`. No-op outside Safari.
 - **Thumbnail/UI tweaks** — rounded corners, hi-DPI `srcset`, watched indicators.
+
+For consumers building external clients (e.g. the Apple TV / iOS app), see `docs/API_CLIENT_GUIDE.md`.
 
 ## The golden rule: keep edits to upstream files thin and marked
 
