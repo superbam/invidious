@@ -10,13 +10,11 @@
 // DASH, which video.js plays through MSE — Safari sees no routable video, so the
 // picker lists audio devices only ("audio works, video isn't an option").
 //
-// Safari also decides the device list when the picker opens, and the picker must
-// open inside the user gesture — so we can't switch the source after the tap. The
-// fix: switch to a progressive (native) MP4 as soon as an AirPlay video target
-// appears on the network (which is when the button appears), so the element is
-// already routable when the picker opens. Full DASH quality is restored when the
-// target goes away or after casting ends. Progressive maxes out at ~720p (the
-// muxed limit), which is the cap on AirPlay video here.
+// To keep full quality during normal viewing, the switch is *deliberate*: tapping
+// the AirPlay button switches to a progressive (native) MP4 and then opens the
+// picker in the same gesture, so the element is routable as video when you cast.
+// Full DASH quality is restored when casting ends or the target leaves. Progressive
+// maxes out at ~720p (the muxed limit), which is the cap on AirPlay video here.
 (function () {
     // WebKitPlaybackTargetAvailabilityEvent only exists on Apple/WebKit builds
     // that expose AirPlay. Bail everywhere else so nothing changes.
@@ -84,8 +82,9 @@
         var Button = videojs.getComponent('Button');
         var airplayButton = new Button(player, {
             clickHandler: function () {
-                // Should already be native (switched when the target appeared); guard
-                // against a race. The picker still opens within this gesture.
+                // Deliberate switch: make the element video-routable, then open the
+                // picker within this same gesture (Safari requires the gesture, and
+                // fixes the device list when the picker opens).
                 ensureNativeSource();
                 try {
                     videoEl.webkitShowPlaybackTargetPicker();
@@ -108,9 +107,9 @@
 
         videoEl.addEventListener('webkitplaybacktargetavailabilitychanged', function (event) {
             if (event.availability === 'available') {
+                // Just surface the button — no source change until the user taps it,
+                // so normal viewing keeps full DASH quality.
                 airplayButton.show();
-                // Make the element routable as video *before* the user opens the picker.
-                ensureNativeSource();
             } else {
                 airplayButton.hide();
                 restoreOriginalSource();
