@@ -193,6 +193,13 @@ we're going to need to do it here in order to allow for translations.
 
             <%= Invidious::Frontend::WatchPage.download_widget(locale, video, video_assets) %>
 
+            <%# >>> shorts-filter: in-app offline download (IndexedDB + SponsorBlock + resume) %>
+            <link rel="stylesheet" href="/css/offline.css?v=<%= ASSET_COMMIT %>">
+            <div id="offline-download"></div>
+            <script src="/js/offline.js?v=<%= ASSET_COMMIT %>"></script>
+            <script src="/js/download_button.js?v=<%= ASSET_COMMIT %>"></script>
+            <%# <<< shorts-filter %>
+
             <p id="views"><i class="icon ion-ios-eye"></i> <%= number_with_separator(video.views) %></p>
             <p id="likes"><i class="icon ion-ios-thumbs-up"></i> <%= number_with_separator(video.likes) %></p>
             <p id="dislikes" style="display: none; visibility: hidden;"></p>

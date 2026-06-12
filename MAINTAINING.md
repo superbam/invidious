@@ -23,7 +23,11 @@ upstream  https://github.com/iv-org/invidious.git
 
 - **Shorts filtering** — detect YouTube Shorts and let users hide/show them.
 - **SponsorBlock proxy API** — `src/invidious/routes/api/v1/sponsorblock.cr` (new file).
-- **Thumbnail/UI tweaks** — rounded corners, hi-DPI `srcset`, watched indicators.
+- **Thumbnail/UI tweaks** — rounded corners, hi-DPI `srcset` (incl. `maxres.jpg`), watched indicators, navbar reorg (gear pinned right, Log out → /preferences), compact subscriptions filter, Watch history in the top feed menu.
+- **PWA** — installable progressive web app. New files: `assets/sw.js` (service worker), `assets/js/sw-register.js`, `assets/offline.html`. Marked edits: iOS `<meta>` tags + SW registration `<script>` in `views/template.ecr`.
+- **Offline downloads** — save a muxed video or audio-only file for offline playback with SponsorBlock segments + resume; finishing offline queues a mark-watched synced via `/watch_ajax` when next online (no DB changes). New files: `assets/js/offline.js` (`window.InvidiousOffline`), `assets/js/download_button.js`, `assets/js/offline_library.js`, `assets/downloads.html`, `assets/css/offline.css`. Marked edits: widget block in `views/watch.ecr`, "Downloads" footer link in `template.ecr`.
+
+> ⚠️ **CSP / playback landmine (learned the hard way 2026-06-12).** The video.js player (VHS) runs its transmuxer in a Web Worker loaded from a `blob:` URL. The CSP in `routes/before_all.cr` has `child-src 'self' blob:` and `media-src ... blob:` for exactly this. Do **NOT** add a `worker-src` directive without `blob:` — `worker-src 'self'` overrides the `child-src` fallback and silently **blocks the transmuxer worker, breaking ALL video playback** (every browser, regardless of service worker). The PWA service worker at `/sw.js` is already permitted by `child-src 'self'`, so no `worker-src` is needed at all. If you must add one, use `worker-src 'self' blob:`.
 
 ## The golden rule: keep edits to upstream files thin and marked
 

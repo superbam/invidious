@@ -14,6 +14,12 @@
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=<%= ASSET_COMMIT %>">
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png?v=<%= ASSET_COMMIT %>">
     <link rel="manifest" href="/site.webmanifest?v=<%= ASSET_COMMIT %>">
+    <%# >>> shorts-filter: iOS standalone PWA hints (iOS ignores the web manifest's display mode) %>
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Invidious">
+    <%# <<< shorts-filter %>
     <link rel="mask-icon" href="/safari-pinned-tab.svg?v=<%= ASSET_COMMIT %>" color="#575757">
     <meta name="msapplication-TileColor" content="#575757">
     <meta name="theme-color" content="#575757">
@@ -24,6 +30,9 @@
     <link rel="stylesheet" href="/css/default.css?v=<%= ASSET_COMMIT %>">
     <link rel="stylesheet" href="/css/carousel.css?v=<%= ASSET_COMMIT %>">
     <script src="/js/_helpers.js?v=<%= ASSET_COMMIT %>"></script>
+    <%# shorts-filter: register the PWA service worker (/sw.js) — registration JS is %>
+    <%# external because the page CSP forbids inline scripts %>
+    <script src="/js/sw-register.js?v=<%= ASSET_COMMIT %>"></script>
 </head>
 
 <body class="<%= dark_mode.blank? ? "no" : dark_mode %>-theme">
@@ -123,6 +132,11 @@
                         <span>
                             <i class="icon ion-ios-paper"></i>
                             <a href="https://github.com/iv-org/documentation"><%= I18n.translate(locale, "footer_documentation") %></a>
+                        </span>
+                        <%# shorts-filter: entry point to the offline downloads library %>
+                        <span>
+                            <i class="icon ion-ios-download"></i>
+                            <a href="/downloads.html">Downloads</a>
                         </span>
                     </div>
 
