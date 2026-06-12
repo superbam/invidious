@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<!-- Offline fallback page (fork feature) served by /sw.js when a navigation fails
+     while offline. Self-contained: no external CSS/JS so it renders with nothing
+     cached. Inline styles only (page CSP allows style-src 'unsafe-inline'). -->
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Offline — Invidious</title>
+    <link rel="manifest" href="/site.webmanifest">
+    <meta name="theme-color" content="#575757">
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            background-color: #1a1a1a;
+            color: #f0f0f0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+        .wrap {
+            min-height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 1.5rem;
+            box-sizing: border-box;
+        }
+        h1 { font-weight: 600; margin: 0 0 .5rem; }
+        p { color: #b0b0b0; margin: 0 0 1.5rem; max-width: 28rem; line-height: 1.5; }
+        a.button {
+            display: inline-block;
+            padding: .6rem 1.4rem;
+            border-radius: 6px;
+            background-color: #575757;
+            color: #fff;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        a.button:hover { background-color: #6a6a6a; }
+        .links { margin-top: 1.25rem; font-size: .9rem; }
+        .links a { color: #8ab4f8; }
+    </style>
+</head>
+<body>
+    <div class="wrap">
+        <h1>You're offline</h1>
+        <p>This page needs a network connection. Videos you've saved are still
+           available from your downloads.</p>
+        <a class="button" href="/">Retry</a>
+        <div class="links">
+            <a href="/downloads.html">View downloads</a>
+        </div>
+    </div>
+</body>
+</html>

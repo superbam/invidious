@@ -37,8 +37,14 @@
         var videoEl = player.el().querySelector('video');
         if (!videoEl || typeof videoEl.webkitShowPlaybackTargetPicker !== 'function') return;
 
-        // Captured before any quality switch (a switch replaces the source list).
-        var progressiveSources = nativeVideoSources();
+        // Captured lazily on the first button press, before any quality switch
+        // (a switch replaces the source list). Nothing is read or changed until
+        // you tap the button, so normal viewing is completely untouched.
+        var progressiveSources = null;
+        function getProgressiveSources() {
+            if (progressiveSources === null) progressiveSources = nativeVideoSources();
+            return progressiveSources;
+        }
 
         // Track a temporary downgrade so we can restore full quality afterwards.
         var originalSource = null;
@@ -64,10 +70,11 @@
         // as a *video* AirPlay target. No-op unless we're on DASH and a muxed
         // source exists (e.g. skipped for live HLS and audio-only/listen mode).
         function ensureNativeSource() {
-            if (downgraded || player.currentType() !== DASH_TYPE || !progressiveSources.length) return;
+            var sources = getProgressiveSources();
+            if (downgraded || player.currentType() !== DASH_TYPE || !sources.length) return;
             originalSource = player.currentSource();
             downgraded = true;
-            switchSource(progressiveSources[0]);
+            switchSource(sources[0]);
         }
 
         // Restore the original (DASH) source once it's safe — not while casting.
@@ -96,8 +103,9 @@
 
         airplayButton.controlText('AirPlay');
         airplayButton.addClass('vjs-airplay-button');
-        // Hidden until the browser reports at least one available AirPlay target.
-        airplayButton.hide();
+        // Always shown when WebKit AirPlay exists: the button press is the sole
+        // trigger, so we don't depend on the availability event (which doesn't
+        // fire reliably on every setup) to surface it.
 
         var controlBar = player.getChild('ControlBar');
         var fullscreen = controlBar.getChild('fullscreenToggle');
@@ -106,14 +114,9 @@
         controlBar.addChild(airplayButton, {}, position);
 
         videoEl.addEventListener('webkitplaybacktargetavailabilitychanged', function (event) {
-            if (event.availability === 'available') {
-                // Just surface the button — no source change until the user taps it,
-                // so normal viewing keeps full DASH quality.
-                airplayButton.show();
-            } else {
-                airplayButton.hide();
-                restoreOriginalSource();
-            }
+            // The button stays visible regardless; if all targets disappear while
+            // we're not casting, just drop back to full-quality DASH.
+            if (event.availability !== 'available') restoreOriginalSource();
         });
 
         videoEl.addEventListener('webkitcurrentplaybacktargetiswirelesschanged', function () {

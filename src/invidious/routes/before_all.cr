@@ -53,6 +53,7 @@ module Invidious::Routes::BeforeAll
       "manifest-src 'self'",
       "media-src 'self' blob: " + COMPANION_CSP.companion_urls,
       "child-src 'self' blob:",
+      "worker-src 'self'", # shorts-filter: allow the PWA service worker (/sw.js)
       "frame-src 'self'",
       "frame-ancestors " + frame_ancestors,
     }.join("; ")
