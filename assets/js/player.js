@@ -419,6 +419,23 @@ if (video_data.params.autoplay) {
     bpb.hide();
 
     player.ready(function () {
+        // >>> shorts-filter: autoplay-stall fallback. When autoplay is blocked the
+        // play() promise rejects (handled below), but when the stream is just slow
+        // to start (e.g. companion/extraction latency) the promise stays pending and
+        // the player is left showing a perpetual loading spinner with no play button.
+        // If playback hasn't actually started shortly after the attempt, clear the
+        // spinner and restore the play button so the user can start it manually.
+        var autoplayFallback = setTimeout(function () {
+            if (player.paused()) {
+                player.pause();
+                player.removeClass('vjs-waiting');
+                player.removeClass('vjs-seeking');
+                bpb.show();
+            }
+        }, 3000);
+        player.one('playing', function () { clearTimeout(autoplayFallback); });
+        // <<< shorts-filter
+
         new Promise(function (resolve, reject) {
             setTimeout(function () {resolve(1);}, 1);
         }).then(function (result) {
@@ -427,6 +444,7 @@ if (video_data.params.autoplay) {
             if (promise !== undefined) {
                 promise.then(function () {
                 }).catch(function (error) {
+                    clearTimeout(autoplayFallback); // shorts-filter
                     bpb.show();
                 });
             }
