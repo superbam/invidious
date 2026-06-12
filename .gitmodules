@@ -1,3 +1,5 @@
+# shorts-filter: absolute URL instead of upstream's relative "../mocks", which
+# on a fork resolves to <fork-owner>/mocks (nonexistent) and breaks CI checkout.
 [submodule "mocks"]
 	path = mocks
-	url = ../mocks
+	url = https://github.com/iv-org/mocks
