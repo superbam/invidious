@@ -261,23 +261,10 @@ video.video-js {
   position: relative;
   padding-left: 0;
   padding-right: 0;
-  /* >>> shorts-filter: cap the player width so the 82vh-tall box stays 16:9
-     (eliminates the pillarbox/side black bars on wide windows) and center it. */
-  margin: 0 auto;
-  max-width: calc(82vh / 9 * 16);
-  /* <<< shorts-filter */
+  margin-left: 1em;
+  margin-right: 1em;
   padding-bottom: 82vh;
   height: 0;
-}
-
-/* shorts-filter: rounded video player corners (matches the rounded thumbnails);
-   removed in fullscreen so the video reaches the screen edges. */
-.video-js {
-  border-radius: 12px;
-  overflow: hidden;
-}
-.video-js.vjs-fullscreen {
-  border-radius: 0;
 }
 
 .mobile-operations-bar {
