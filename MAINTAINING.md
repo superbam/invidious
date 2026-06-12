@@ -95,8 +95,11 @@ window):
 | 58 | `config.cr` | `filter_shorts` config |
 | 52 | `routes/watch.cr` | watch-page tweaks |
 | 48 | `routes/feeds.cr` | view filter + webhook Short detection |
-| — | `views/template.ecr` | iOS PWA `<meta>` tags, SW registration script, Downloads footer link |
+| — | `views/template.ecr` | iOS PWA `<meta>` tags, SW registration script, Downloads footer link; navbar reorg (Log out removed, gear enlarged + pinned right) |
 | — | `views/watch.ecr` | offline-download widget block (container + offline.css/js) |
+| — | `views/components/feed_menu.ecr` | Watch history link added to top feed row |
+| — | `views/feeds/subscriptions.ecr` | compact centered Videos/Shorts/All filter + RSS; removed Manage subs / Watch history (moved elsewhere) |
+| — | `views/user/preferences.ecr` | Log out form added (moved from navbar) |
 | — | `routes/before_all.cr` | `worker-src 'self'` in the CSP |
 
 `extractors.cr` keeps upstream's length-parsing block **byte-for-byte**; our only
