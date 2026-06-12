@@ -5,13 +5,18 @@
 // no-op in every other browser. Loaded after player.js, which defines the global
 // `player`, so we only hook into the existing player rather than touching it.
 //
-// Video over AirPlay: Safari can only AirPlay *video* when the <video> element
-// plays a native source (a progressive muxed MP4, or native HLS). The default
-// Invidious quality is DASH, which video.js plays through MSE — and Safari can
-// only send the audio of an MSE stream. So when AirPlay activates on a DASH
-// stream we switch to the best progressive MP4 (capped at ~720p, the muxed
-// limit) so the full video reaches the TV. Live HLS already plays natively and
-// is left alone.
+// Video over AirPlay: Safari only lists an Apple TV as a *video* destination when
+// the <video> element has a native video track. The default Invidious quality is
+// DASH, which video.js plays through MSE — Safari sees no routable video, so the
+// picker lists audio devices only ("audio works, video isn't an option").
+//
+// Safari also decides the device list when the picker opens, and the picker must
+// open inside the user gesture — so we can't switch the source after the tap. The
+// fix: switch to a progressive (native) MP4 as soon as an AirPlay video target
+// appears on the network (which is when the button appears), so the element is
+// already routable when the picker opens. Full DASH quality is restored when the
+// target goes away or after casting ends. Progressive maxes out at ~720p (the
+// muxed limit), which is the cap on AirPlay video here.
 (function () {
     // WebKitPlaybackTargetAvailabilityEvent only exists on Apple/WebKit builds
     // that expose AirPlay. Bail everywhere else so nothing changes.
@@ -34,13 +39,54 @@
         var videoEl = player.el().querySelector('video');
         if (!videoEl || typeof videoEl.webkitShowPlaybackTargetPicker !== 'function') return;
 
-        // Captured before the user changes quality (a quality switch replaces the
-        // source list). Falls back to a live lookup if empty when AirPlay starts.
+        // Captured before any quality switch (a switch replaces the source list).
         var progressiveSources = nativeVideoSources();
+
+        // Track a temporary downgrade so we can restore full quality afterwards.
+        var originalSource = null;
+        var downgraded = false;
+
+        // Replace the active source, preserving playback position and play state.
+        function switchSource(source) {
+            if (!source) return;
+            var resumeAt = player.currentTime();
+            var wasPlaying = !player.paused();
+
+            player.src(source);
+            player.one('loadedmetadata', function () {
+                if (resumeAt) player.currentTime(resumeAt);
+                if (wasPlaying) {
+                    var playback = player.play();
+                    if (playback && typeof playback.catch === 'function') playback.catch(function () {});
+                }
+            });
+        }
+
+        // Ensure the element has a native video source so the Apple TV is offered
+        // as a *video* AirPlay target. No-op unless we're on DASH and a muxed
+        // source exists (e.g. skipped for live HLS and audio-only/listen mode).
+        function ensureNativeSource() {
+            if (downgraded || player.currentType() !== DASH_TYPE || !progressiveSources.length) return;
+            originalSource = player.currentSource();
+            downgraded = true;
+            switchSource(progressiveSources[0]);
+        }
+
+        // Restore the original (DASH) source once it's safe — not while casting.
+        function restoreOriginalSource() {
+            if (!downgraded || videoEl.webkitCurrentPlaybackTargetIsWireless) return;
+            downgraded = false;
+            var source = originalSource;
+            originalSource = null;
+            switchSource(source);
+        }
 
         var Button = videojs.getComponent('Button');
         var airplayButton = new Button(player, {
             clickHandler: function () {
+                // Should already be native (switched when the target appeared); guard
+                // against a race. The picker still opens within this gesture.
+                ensureNativeSource();
                 try {
                     videoEl.webkitShowPlaybackTargetPicker();
                 } catch (err) {
@@ -60,43 +106,22 @@
         var position = fullscreen ? controlBar.children().indexOf(fullscreen) : undefined;
         controlBar.addChild(airplayButton, {}, position);
 
-        // Swap to a native progressive source so the video (not just audio) can be
-        // sent to the AirPlay target, preserving playback position and state.
-        function switchToProgressive() {
-            var sources = progressiveSources.length ? progressiveSources : nativeVideoSources();
-            var best = sources[0];
-            if (!best) return; // audio-only / no muxed stream: nothing we can do
-
-            var resumeAt = player.currentTime();
-            var wasPlaying = !player.paused();
-
-            player.src(best);
-            player.one('loadedmetadata', function () {
-                if (resumeAt) player.currentTime(resumeAt);
-                if (wasPlaying) {
-                    var playback = player.play();
-                    if (playback && typeof playback.catch === 'function') playback.catch(function () {});
-                }
-            });
-        }
-
         videoEl.addEventListener('webkitplaybacktargetavailabilitychanged', function (event) {
             if (event.availability === 'available') {
                 airplayButton.show();
+                // Make the element routable as video *before* the user opens the picker.
+                ensureNativeSource();
             } else {
                 airplayButton.hide();
+                restoreOriginalSource();
             }
         });
 
         videoEl.addEventListener('webkitcurrentplaybacktargetiswirelesschanged', function () {
             var isWireless = videoEl.webkitCurrentPlaybackTargetIsWireless;
             airplayButton.toggleClass('vjs-airplay-active', isWireless);
-
-            // On a DASH/MSE stream Safari only sends audio — switch to progressive
-            // so the picture follows. Native (mp4/HLS) sources are left untouched.
-            if (isWireless && player.currentType() === DASH_TYPE) {
-                switchToProgressive();
-            }
+            // Casting ended: go back to full-quality DASH.
+            if (!isWireless) restoreOriginalSource();
         });
     });
 })();
