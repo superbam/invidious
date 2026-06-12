@@ -420,4 +420,13 @@
             </div>
         </fieldset>
     </form>
+
+    <%# shorts-filter: Log out moved here from the navbar (separate form: a POST + %>
+    <%# CSRF can't be nested inside the preferences form above) %>
+    <% if env.get?("user") %>
+        <form class="pure-form" action="/signout?referer=<%= URI.encode_www_form(referer) %>" method="post" style="margin-top: 1.5em">
+            <input type="hidden" name="csrf_token" value="<%= HTML.escape(env.get?("csrf_token").try &.as(String) || "") %>">
+            <button type="submit" class="pure-button"><%= I18n.translate(locale, "Log out") %></button>
+        </form>
+    <% end %>
 </div>
