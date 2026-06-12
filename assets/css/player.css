@@ -265,6 +265,11 @@ video.video-js {
   margin-right: 1em;
   padding-bottom: 82vh;
   height: 0;
+  /* shorts-filter: round the player corners by clipping the wrapper (leaves
+     video.js's own sizing untouched). Fullscreen promotes .video-js out of this
+     wrapper, so it's unaffected. */
+  border-radius: 12px;
+  overflow: hidden;
 }
 
 .mobile-operations-bar {
