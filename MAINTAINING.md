@@ -22,12 +22,8 @@ upstream  https://github.com/iv-org/invidious.git
 ## Local features (what we add on top of upstream)
 
 - **Shorts filtering** — detect YouTube Shorts and let users hide/show them.
-- **SponsorBlock + DeArrow proxy API** — `src/invidious/routes/api/v1/sponsorblock.cr` (new file): `/api/v1/sponsorblock/timings/:id`, `/api/v1/dearrow/branding/:id`, `/api/v1/dearrow/thumbnail/:id`.
-- **PWA** — installable progressive web app. New files: `assets/sw.js` (service worker: cache-first versioned assets, network-only streams/proxy/auth, network-first navigations with offline fallback), `assets/js/sw-register.js` (registration), `assets/offline.html` (offline fallback). Marked edits: iOS standalone `<meta>` tags + the registration `<script>` in `template.ecr`; `worker-src 'self'` in the CSP in `routes/before_all.cr`.
-- **Offline downloads** — save a muxed video or audio-only file for offline playback, with SponsorBlock segments captured at download time and a resume position; finishing offline queues a mark-watched that syncs via `/watch_ajax` when next online on a logged-in page (no DB/server changes). New files: `assets/js/offline.js` (IndexedDB store + downloader + sync queue, `window.InvidiousOffline`), `assets/js/download_button.js` (watch-page widget), `assets/js/offline_library.js` + `assets/downloads.html` (standalone, SW-precached library/player), `assets/css/offline.css`. Marked edits: download widget block in `watch.ecr`; a "Downloads" footer link in `template.ecr`. `/sw.js` precaches the library + its assets.
+- **SponsorBlock proxy API** — `src/invidious/routes/api/v1/sponsorblock.cr` (new file).
 - **Thumbnail/UI tweaks** — rounded corners, hi-DPI `srcset`, watched indicators.
-
-For consumers building external clients (e.g. the Apple TV / iOS app), see `docs/API_CLIENT_GUIDE.md`.
 
 ## The golden rule: keep edits to upstream files thin and marked
 
@@ -95,12 +91,6 @@ window):
 | 58 | `config.cr` | `filter_shorts` config |
 | 52 | `routes/watch.cr` | watch-page tweaks |
 | 48 | `routes/feeds.cr` | view filter + webhook Short detection |
-| — | `views/template.ecr` | iOS PWA `<meta>` tags, SW registration script, Downloads footer link; navbar reorg (Log out removed, gear enlarged + pinned right) |
-| — | `views/watch.ecr` | offline-download widget block (container + offline.css/js) |
-| — | `views/components/feed_menu.ecr` | Watch history link added to top feed row |
-| — | `views/feeds/subscriptions.ecr` | compact centered Videos/Shorts/All filter + RSS; removed Manage subs / Watch history (moved elsewhere) |
-| — | `views/user/preferences.ecr` | Log out form added (moved from navbar) |
-| — | `routes/before_all.cr` | `worker-src 'self'` in the CSP |
 
 `extractors.cr` keeps upstream's length-parsing block **byte-for-byte**; our only
 addition is a marked call to `Invidious::Shorts.detect_in_renderer`. Keep it that

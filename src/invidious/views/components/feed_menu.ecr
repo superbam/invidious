@@ -8,10 +8,4 @@
             <%= I18n.translate(locale, feed) %>
         </a>
     <% end %>
-    <%# shorts-filter: Watch history promoted to the top feed row (was on the subscriptions page) %>
-    <% if env.get?("user") %>
-        <a href="/feed/history" class="feed-menu-item pure-menu-heading">
-            <%= I18n.translate(locale, "Watch history") %>
-        </a>
-    <% end %>
 </div>
