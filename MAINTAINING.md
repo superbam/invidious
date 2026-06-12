@@ -23,7 +23,6 @@ upstream  https://github.com/iv-org/invidious.git
 
 - **Shorts filtering** — detect YouTube Shorts and let users hide/show them.
 - **SponsorBlock + DeArrow proxy API** — `src/invidious/routes/api/v1/sponsorblock.cr` (new file): `/api/v1/sponsorblock/timings/:id`, `/api/v1/dearrow/branding/:id`, `/api/v1/dearrow/thumbnail/:id`.
-- **AirPlay support** — `assets/js/airplay.js` (new file) adds a Safari/WebKit AirPlay button to the video.js control bar; wired in via `player.ecr` (`x-webkit-airplay` attr + script tag) and styled in `player.css`. No-op outside Safari. Button is always shown when WebKit AirPlay exists and switches to a progressive (native) source only on press, restoring DASH afterwards.
 - **PWA** — installable progressive web app. New files: `assets/sw.js` (service worker: cache-first versioned assets, network-only streams/proxy/auth, network-first navigations with offline fallback), `assets/js/sw-register.js` (registration), `assets/offline.html` (offline fallback). Marked edits: iOS standalone `<meta>` tags + the registration `<script>` in `template.ecr`; `worker-src 'self'` in the CSP in `routes/before_all.cr`.
 - **Offline downloads** — save a muxed video or audio-only file for offline playback, with SponsorBlock segments captured at download time and a resume position; finishing offline queues a mark-watched that syncs via `/watch_ajax` when next online on a logged-in page (no DB/server changes). New files: `assets/js/offline.js` (IndexedDB store + downloader + sync queue, `window.InvidiousOffline`), `assets/js/download_button.js` (watch-page widget), `assets/js/offline_library.js` + `assets/downloads.html` (standalone, SW-precached library/player), `assets/css/offline.css`. Marked edits: download widget block in `watch.ecr`; a "Downloads" footer link in `template.ecr`. `/sw.js` precaches the library + its assets.
 - **Thumbnail/UI tweaks** — rounded corners, hi-DPI `srcset`, watched indicators.
@@ -98,7 +97,6 @@ window):
 | 48 | `routes/feeds.cr` | view filter + webhook Short detection |
 | — | `views/template.ecr` | iOS PWA `<meta>` tags, SW registration script, Downloads footer link |
 | — | `views/watch.ecr` | offline-download widget block (container + offline.css/js) |
-| — | `views/components/player.ecr` | `x-webkit-airplay` attr + airplay.js script |
 | — | `routes/before_all.cr` | `worker-src 'self'` in the CSP |
 
 `extractors.cr` keeps upstream's length-parsing block **byte-for-byte**; our only

@@ -293,18 +293,3 @@ video.video-js {
     overflow-x: hidden;
   }
 }
-
-/* >>> shorts-filter: AirPlay button (Safari only; see /js/airplay.js) */
-.video-js .vjs-airplay-button .vjs-icon-placeholder::before {
-  content: "";
-  display: block;
-  height: 100%;
-  background-color: currentColor;
-  -webkit-mask: center / 1.7em no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M21 3H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h4v-2H3V5h18v12h-4v2h4c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z'/%3E%3Cpath d='M6 22h12l-6-6z'/%3E%3C/svg%3E");
-  mask: center / 1.7em no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M21 3H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h4v-2H3V5h18v12h-4v2h4c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z'/%3E%3Cpath d='M6 22h12l-6-6z'/%3E%3C/svg%3E");
-}
-
-.video-js .vjs-airplay-button.vjs-airplay-active {
-  color: #2196f3;
-}
-/* <<< shorts-filter */
