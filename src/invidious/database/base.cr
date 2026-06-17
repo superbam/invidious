@@ -131,6 +131,18 @@ module Invidious::Database
   # it (Shorts filtering, the subscription feed view) fails with
   # "column \"is_short\" does not exist".
   def ensure_feature_columns
+    # shorts-filter: per-user playback positions table. Created here (not just
+    # via --migrate) so it always exists, matching the is_short handling below.
+    begin
+      PG_DB.exec(
+        "CREATE TABLE IF NOT EXISTS public.playback_positions " \
+        "(email text NOT NULL, video_id text NOT NULL, position integer NOT NULL, " \
+        "updated timestamptz DEFAULT now(), PRIMARY KEY (email, video_id))"
+      )
+    rescue ex
+      LOGGER.error("ensure_feature_columns: playback_positions : #{ex.message}")
+    end
+
     begin
       already_present = PG_DB.query_one(
         "SELECT EXISTS (SELECT 1 FROM information_schema.columns " \

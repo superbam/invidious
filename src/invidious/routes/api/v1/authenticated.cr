@@ -113,6 +113,58 @@ module Invidious::Routes::API::V1::Authenticated
     env.response.status_code = 204
   end
 
+  # shorts-filter: per-video resume positions (seconds). Stock Invidious only
+  # keeps these in browser localStorage; this backs cross-device sync for
+  # native clients. Returns a { videoId => seconds } map.
+  def self.get_positions(env)
+    env.response.content_type = "application/json"
+    user = env.get("user").as(User)
+
+    Invidious::Database::PlaybackPositions.select_all(user).to_json
+  end
+
+  def self.set_position(env)
+    env.response.content_type = "application/json"
+    user = env.get("user").as(User)
+
+    if !user.preferences.watch_history
+      return error_json(409, "Watch history is disabled in preferences.")
+    end
+
+    id = env.params.url["id"]
+    if !id.match(/^[a-zA-Z0-9_-]{11}$/)
+      return error_json(400, "Invalid video id.")
+    end
+
+    # Accept ?position=<sec> or a JSON body {"position": <sec>}; allow floats.
+    position = env.params.query["position"]?.try &.to_f?
+    if position.nil?
+      if body = env.request.body.try &.gets_to_end
+        parsed = JSON.parse(body)["position"]?
+        position = parsed.try { |p| p.as_f? || p.as_i?.try(&.to_f) }
+      end
+    end
+
+    if position.nil? || position < 0
+      return error_json(400, "Invalid position.")
+    end
+
+    Invidious::Database::PlaybackPositions.upsert(user, id, position.to_i)
+    env.response.status_code = 204
+  end
+
+  def self.delete_position(env)
+    user = env.get("user").as(User)
+
+    id = env.params.url["id"]
+    if !id.match(/^[a-zA-Z0-9_-]{11}$/)
+      return error_json(400, "Invalid video id.")
+    end
+
+    Invidious::Database::PlaybackPositions.delete(user, id)
+    env.response.status_code = 204
+  end
+
   def self.feed(env)
     env.response.content_type = "application/json"
 

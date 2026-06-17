@@ -134,6 +134,7 @@ struct SearchVideo
       json.field "isVr360", self.badges.vr360?
       json.field "is3d", self.badges.three_d?
       json.field "hasCaptions", self.badges.closed_captions?
+      json.field "isShort", self.badges.short? # shorts-filter
     end
   end
 

@@ -302,6 +302,11 @@ module Invidious::Routing
       delete "/api/v1/auth/history/:id", {{namespace}}::Authenticated, :mark_unwatched
       delete "/api/v1/auth/history", {{namespace}}::Authenticated, :clear_history
 
+      # shorts-filter: per-video resume position sync for native clients.
+      get "/api/v1/auth/positions", {{namespace}}::Authenticated, :get_positions
+      post "/api/v1/auth/positions/:id", {{namespace}}::Authenticated, :set_position
+      delete "/api/v1/auth/positions/:id", {{namespace}}::Authenticated, :delete_position
+
       get "/api/v1/auth/feed", {{namespace}}::Authenticated, :feed
 
       get "/api/v1/auth/subscriptions", {{namespace}}::Authenticated, :get_subscriptions

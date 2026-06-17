@@ -42,6 +42,8 @@ struct ChannelVideo
       json.field "publishedText", I18n.translate(locale, "`x` ago", recode_date(self.published, locale))
 
       json.field "viewCount", self.views
+
+      json.field "isShort", self.is_short # shorts-filter
     end
   end
 
