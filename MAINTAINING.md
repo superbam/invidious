@@ -111,6 +111,14 @@ crystal tool format --check
 CI (`.github/workflows/ci.yml`) runs all three on push. Crystal isn't required
 locally — you can rely on CI as the gate, but a local `crystal spec` is faster.
 
+> **Don't expect green CI on `master`.** `master` mirrors upstream's relative
+> `../mocks` submodule URL, which resolves to the (nonexistent) `<fork-owner>/mocks`
+> and breaks checkout on a fork — so any CI run on `master` fails in seconds,
+> before it compiles. `shorts-filter` carries the absolute-URL fix in
+> `.gitmodules`, so it's green. We don't touch `master`'s `ci.yml` (keeping it a
+> clean mirror); instead the default branch is `shorts-filter`, which keeps the
+> daily `schedule:` cron and the merge canary running against a branch that passes.
+
 ### Smoke test (semantic safety net)
 
 `spec/invidious/yt_backend/shorts_spec.cr` feeds minimal InnerTube fixtures into
@@ -125,9 +133,9 @@ into `shorts-filter`, and opens a `merge-canary`-labelled issue if it no longer
 merges cleanly — so you hear about drift on your schedule, not at deploy time.
 
 > **GitHub limitation:** scheduled workflows only run from the repository's
-> **default branch**. For the weekly cron to fire, set `shorts-filter` as this
-> fork's default branch (Settings → Branches). You can always trigger it manually
-> via the Actions tab → "Run workflow".
+> **default branch** — which is why this fork's default branch is `shorts-filter`
+> (not `master`). That lets the weekly canary cron fire automatically; you can
+> also trigger it manually via the Actions tab → "Run workflow".
 
 ## Database note
 
