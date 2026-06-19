@@ -304,6 +304,7 @@ module Invidious::Routing
 
       # shorts-filter: per-video resume position sync for native clients.
       get "/api/v1/auth/positions", {{namespace}}::Authenticated, :get_positions
+      get "/api/v1/auth/positions/:id", {{namespace}}::Authenticated, :get_position
       post "/api/v1/auth/positions/:id", {{namespace}}::Authenticated, :set_position
       delete "/api/v1/auth/positions/:id", {{namespace}}::Authenticated, :delete_position
 

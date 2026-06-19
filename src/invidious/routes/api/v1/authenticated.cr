@@ -123,6 +123,21 @@ module Invidious::Routes::API::V1::Authenticated
     Invidious::Database::PlaybackPositions.select_all(user).to_json
   end
 
+  # shorts-filter: single-video resume position, so native clients can fetch
+  # the freshest position for the video being opened without pulling the whole
+  # map. Returns { "position": <seconds> } or { "position": null }.
+  def self.get_position(env)
+    env.response.content_type = "application/json"
+    user = env.get("user").as(User)
+
+    id = env.params.url["id"]
+    if !id.match(/^[a-zA-Z0-9_-]{11}$/)
+      return error_json(400, "Invalid video id.")
+    end
+
+    {"position" => Invidious::Database::PlaybackPositions.get(user, id)}.to_json
+  end
+
   def self.set_position(env)
     env.response.content_type = "application/json"
     user = env.get("user").as(User)
