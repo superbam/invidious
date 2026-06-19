@@ -238,6 +238,10 @@ add_handler DenyFrame.new
 add_context_storage_type(Array(String))
 add_context_storage_type(Preferences)
 add_context_storage_type(Invidious::User)
+# shorts-filter: per-request memo of the user's synced playback positions
+# ({videoId => seconds}) so item.ecr can draw resume bars without one DB
+# query per item. See views/components/item.ecr.
+add_context_storage_type(Hash(String, Int32))
 
 Kemal.config.logger = LOGGER
 Kemal.config.app_name = "Invidious"

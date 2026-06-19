@@ -8,7 +8,11 @@ function get_all_video_times() {
 var all_video_times = get_all_video_times();
 
 document.querySelectorAll('.watched-indicator').forEach(function (indicator) {
-    var watched_part = all_video_times[indicator.dataset.id];
+    // shorts-filter: prefer the account-synced position (rendered server-side
+    // from playback_positions) over this browser's localStorage, so positions
+    // set on another device / native client draw without opening the video here.
+    var server_seconds = parseInt(indicator.dataset.watchedSeconds, 10);
+    var watched_part = !isNaN(server_seconds) ? server_seconds : all_video_times[indicator.dataset.id];
     var total = parseInt(indicator.dataset.length, 10);
     var is_watched = indicator.dataset.watched === '1';
 

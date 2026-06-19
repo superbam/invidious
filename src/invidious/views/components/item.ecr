@@ -2,6 +2,22 @@
   thin_mode = env.get("preferences").as(Preferences).thin_mode
   item_watched = !item.is_a?(SearchChannel | SearchHashtag | SearchPlaylist | InvidiousPlaylist | Category | ProblematicTimelineItem) && env.get?("user").try &.as(User).watched.index(item.id) != nil
   author_verified = item.responds_to?(:author_verified) && item.author_verified
+
+  # shorts-filter: resume position (seconds) for the thumbnail progress bar,
+  # read from the synced playback_positions store so positions set on another
+  # device / native client draw without first opening the video here. The map
+  # is fetched once per request and memoized on env.
+  item_position = nil
+  if !item.is_a?(SearchChannel | SearchHashtag | SearchPlaylist | InvidiousPlaylist | Category | ProblematicTimelineItem)
+    if (pos_user = env.get?("user").try &.as(User)) && env.get("preferences").as(Preferences).save_player_pos
+      positions = env.get?("playback_positions_map").as?(Hash(String, Int32))
+      if positions.nil?
+        positions = Invidious::Database::PlaybackPositions.select_all(pos_user)
+        env.set "playback_positions_map", positions
+      end
+      item_position = positions[item.id]?
+    end
+  end
 -%>
 
 <div class="pure-u-1 pure-u-md-1-4">
@@ -135,6 +151,8 @@
                         <% if item_watched %>
                             <div class="watched-overlay"></div>
                             <div class="watched-indicator" data-length="<%= item.length_seconds %>" data-id="<%= item.id %>" data-watched="1"></div>
+                        <% elsif item_position %>
+                            <div class="watched-indicator" data-length="<%= item.length_seconds %>" data-id="<%= item.id %>" data-watched-seconds="<%= item_position %>" style="display:none"></div>
                         <% else %>
                             <div class="watched-indicator" data-length="<%= item.length_seconds %>" data-id="<%= item.id %>" style="display:none"></div>
                         <% end %>
