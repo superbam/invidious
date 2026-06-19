@@ -366,8 +366,13 @@ if (video_data.premiere_timestamp && Math.round(new Date() / 1000) < video_data.
 if (video_data.params.save_player_pos) {
     const url = new URL(location);
     const hasTimeParam = url.searchParams.has('t');
-    const rememberedTime = get_video_time();
+    // shorts-filter: prefer the account-synced position (injected server-side
+    // from playback_positions) when signed in; fall back to this browser's
+    // localStorage for anonymous users.
+    const serverPos = (typeof video_data.saved_position === 'number') ? video_data.saved_position : null;
+    const rememberedTime = (serverPos !== null) ? serverPos : get_video_time();
     let lastUpdated = 0;
+    let lastServerSaved = -1;
 
     if(!hasTimeParam) {
       if (rememberedTime >= video_data.length_seconds - 20)
@@ -383,6 +388,22 @@ if (video_data.params.save_player_pos) {
         if(lastUpdated !== time && raw <= video_data.length_seconds - 15) {
             save_video_time(time);
             lastUpdated = time;
+            // shorts-filter: sync to the account every ~5s (throttled) so the
+            // position reaches other devices without a request per second.
+            if (time !== lastServerSaved && time % 5 === 0) {
+                save_video_time_server(time);
+                lastServerSaved = time;
+            }
+        }
+    });
+
+    // shorts-filter: flush the current position on pause so a partial-second
+    // position isn't lost before the next 5s tick.
+    player.on('pause', function () {
+        const time = Math.floor(player.currentTime());
+        if (time > 0 && time <= video_data.length_seconds - 15 && time !== lastServerSaved) {
+            save_video_time_server(time);
+            lastServerSaved = time;
         }
     });
 }
@@ -643,6 +664,16 @@ function save_video_time(seconds) {
     const all_video_times = get_all_video_times();
     all_video_times[video_data.id] = seconds;
     helpers.storage.set(save_player_pos_key, all_video_times);
+}
+
+// shorts-filter: persist the resume position to the signed-in account's synced
+// store (the same one native clients like Yattee use), so it follows the user
+// across devices. Only meaningful when signed in (csrf_token present).
+function save_video_time_server(seconds) {
+    if (!video_data.csrf_token) return;
+    const url = '/watch_ajax?action=save_player_pos&redirect=false&id=' +
+        video_data.id + '&position=' + seconds;
+    helpers.xhr('POST', url, {payload: 'csrf_token=' + video_data.csrf_token}, {});
 }
 
 function get_video_time() {

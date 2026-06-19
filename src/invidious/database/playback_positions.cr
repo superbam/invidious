@@ -23,6 +23,17 @@ module Invidious::Database::PlaybackPositions
     PG_DB.query_all(request, user.email, as: {String, Int32}).to_h
   end
 
+  # Returns the stored playback position (seconds) for a single video, or nil
+  # if none. Used to seed the web player's resume point from the synced store.
+  def get(user : User, vid : String) : Int32?
+    request = <<-SQL
+      SELECT position FROM playback_positions
+      WHERE email = $1 AND video_id = $2
+    SQL
+
+    PG_DB.query_one?(request, user.email, vid, as: Int32)
+  end
+
   # Inserts or updates the playback position (in seconds) for a single video.
   def upsert(user : User, vid : String, position : Int32)
     request = <<-SQL

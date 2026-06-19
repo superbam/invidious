@@ -74,6 +74,15 @@ module Invidious::Routes::Watch
       Invidious::Database::Users.mark_watched(user.as(User), id)
     end
 
+    # shorts-filter: seed the web player's resume point from the synced
+    # playback_positions table (the same store native clients like Yattee use),
+    # so a position saved on another device restores on the website too. Only
+    # for signed-in users with both watch history and "save playback position".
+    saved_position = nil
+    if user && preferences.watch_history && params.save_player_pos
+      saved_position = Invidious::Database::PlaybackPositions.get(user, id)
+    end
+
     if CONFIG.enable_user_notifications && notifications && notifications.includes? id
       Invidious::Database::Users.remove_notification(user.as(User), id)
       env.get("user").as(User).notifications.delete(id)
@@ -257,6 +266,18 @@ module Invidious::Routes::Watch
       Invidious::Database::Users.mark_watched(user, id)
     when "mark_unwatched"
       Invidious::Database::Users.mark_unwatched(user, id)
+    when "save_player_pos"
+      # shorts-filter: persist the web player's resume position to the synced
+      # playback_positions store so it's available on other devices / native
+      # clients. CSRF was already validated above.
+      if !id.match(/^[a-zA-Z0-9_-]{11}$/)
+        return error_json(400, "Invalid video id.")
+      end
+      position = env.params.query["position"]?.try &.to_i?
+      if position.nil? || position < 0
+        return error_json(400, "Invalid position.")
+      end
+      Invidious::Database::PlaybackPositions.upsert(user, id, position)
     else
       return error_json(400, "Unsupported action #{action}")
     end

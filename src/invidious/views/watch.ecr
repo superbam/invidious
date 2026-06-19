@@ -71,7 +71,8 @@ we're going to need to do it here in order to allow for translations.
     "dearrow_titles"          => preferences.dearrow_titles,
     "dearrow_thumbnails"      => preferences.dearrow_thumbnails,
     "csrf_token"              => URI.encode_www_form(env.get?("csrf_token").try &.as(String) || ""),
-    "mark_watched_enabled"    => (env.get?("user") != nil && preferences.watch_history)
+    "mark_watched_enabled"    => (env.get?("user") != nil && preferences.watch_history),
+    "saved_position"          => saved_position
 }.to_pretty_json
 %>
 </script>
