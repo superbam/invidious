@@ -1,6 +1,11 @@
 require "../spec_helper"
 
-private def fake_related(id : String, ucid : String = "UC_default", views : String = "100") : Hash(String, String)
+private def fake_related(
+  id : String,
+  ucid : String = "UC_default",
+  views : String = "100",
+  published : String = "",
+) : Hash(String, String)
   {
     "id"               => id,
     "title"            => "Title for #{id}",
@@ -9,7 +14,7 @@ private def fake_related(id : String, ucid : String = "UC_default", views : Stri
     "length_seconds"   => "120",
     "short_view_count" => views,
     "author_verified"  => "false",
-    "published"        => "",
+    "published"        => published,
   }
 end
 
@@ -46,14 +51,64 @@ Spectator.describe "rank_recommendations" do
     expect(videos.map(&.id)).to eq(["popular", "rare"])
   end
 
-  it "gives a subscribed channel's candidate a bump over an equally-suggested one" do
+  it "ranks a candidate found higher (earlier) in a related-videos list above one found lower, all else equal" do
+    # Same single source list, same views/publish-date defaults for both —
+    # the only difference is position (0 vs 1), so it isolates that signal.
     related_lists = [
-      [fake_related("from_subscribed", ucid: "UC_subscribed"), fake_related("from_other", ucid: "UC_other")],
+      [fake_related("top"), fake_related("buried")],
+    ]
+
+    videos, _has_more = rank_recommendations(related_lists, [] of String, [] of String)
+
+    expect(videos.map(&.id)).to eq(["top", "buried"])
+  end
+
+  it "gives a subscribed channel's candidate a bump over an equally-ranked, equally-suggested one" do
+    # Same position (0) in separate source lists, so frequency/position
+    # scores tie exactly — the only difference is subscription status.
+    related_lists = [
+      [fake_related("from_subscribed", ucid: "UC_subscribed")],
+      [fake_related("from_other", ucid: "UC_other")],
     ]
 
     videos, _has_more = rank_recommendations(related_lists, [] of String, ["UC_subscribed"])
 
     expect(videos.map(&.id)).to eq(["from_subscribed", "from_other"])
+  end
+
+  it "gives a more-viewed candidate a bump over an equally-ranked, equally-suggested one" do
+    related_lists = [
+      [fake_related("more_views", views: "5M")],
+      [fake_related("fewer_views", views: "100")],
+    ]
+
+    videos, _has_more = rank_recommendations(related_lists, [] of String, [] of String)
+
+    expect(videos.map(&.id)).to eq(["more_views", "fewer_views"])
+  end
+
+  it "gives a newer candidate a bump over an equally-ranked, equally-suggested older one" do
+    related_lists = [
+      [fake_related("newer", published: (Time.utc - 1.day).to_rfc3339)],
+      [fake_related("older", published: (Time.utc - 700.days).to_rfc3339)],
+    ]
+
+    videos, _has_more = rank_recommendations(related_lists, [] of String, [] of String)
+
+    expect(videos.map(&.id)).to eq(["newer", "older"])
+  end
+
+  it "doesn't let recency or popularity override a much stronger frequency/position signal" do
+    related_lists = [
+      [fake_related("strong_signal", views: "10", published: (Time.utc - 5.years).to_rfc3339)],
+      [fake_related("strong_signal", views: "10", published: (Time.utc - 5.years).to_rfc3339)],
+      [fake_related("strong_signal", views: "10", published: (Time.utc - 5.years).to_rfc3339)],
+      [fake_related("weak_signal", views: "50M", published: (Time.utc - 1.day).to_rfc3339)],
+    ]
+
+    videos, _has_more = rank_recommendations(related_lists, [] of String, [] of String)
+
+    expect(videos.map(&.id)).to eq(["strong_signal", "weak_signal"])
   end
 
   it "paginates: has_more is true when more candidates remain, false on the last page" do

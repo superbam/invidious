@@ -1,10 +1,10 @@
 # Builds a personalized recommendation list from watch history: for a
 # bounded window of recently-watched videos, pull each one's cached "related
-# videos" and tally how often each candidate shows up across that window —
-# a candidate suggested by more of what you watched ranks higher. Being from
-# a subscribed channel is a secondary signal: it nudges the score of a
-# candidate that already showed up this way, it doesn't add candidates of
-# its own.
+# videos" and score how often, how prominently, and how strongly each
+# candidate shows up across that window. Being from a subscribed channel,
+# the candidate's own popularity, and how recent it is are secondary
+# signals layered on top — they nudge the score of a candidate that
+# already showed up this way, they don't add candidates of their own.
 #
 # Candidates are rendered straight from the lightweight related-video data
 # collected along the way (title/author/ucid/length/rough view count) rather
@@ -14,10 +14,13 @@
 # yet, and get_video() always does a live YouTube fetch for anything it
 # can't find in Postgres regardless of the `refresh` flag. Re-fetching ~60
 # of those one at a time was the entire cost of loading this page.
-HISTORY_WINDOW    =  150
-RECOMMENDED_COUNT =   60
-SUBSCRIBED_BONUS  =    2
-FETCH_CONCURRENCY =   10
+HISTORY_WINDOW      =  150
+RECOMMENDED_COUNT   =   60
+SUBSCRIBED_BONUS    =  0.5
+VIEWS_WEIGHT        = 0.15
+RECENCY_WEIGHT      =  0.5
+RECENCY_WINDOW_DAYS = 730
+FETCH_CONCURRENCY   =   10
 
 record RecommendedVideo,
   id : String,
@@ -57,7 +60,7 @@ def rank_recommendations(
   watched_set = watched.to_set
   subscribed_ucids = subscriptions.to_set
 
-  counts = Hash(String, Int32).new(0)
+  frequency_scores = Hash(String, Float64).new(0.0)
   from_subscription = Set(String).new
   candidate_info = Hash(String, Hash(String, String)).new
 
@@ -66,21 +69,22 @@ def rank_recommendations(
     # heavily-cross-linked video can't dominate the tally by itself.
     seen_in_source = Set(String).new
 
-    related_videos.each do |related|
+    related_videos.each_with_index do |related, position|
       id = related["id"]
       next if watched_set.includes?(id)
       next unless seen_in_source.add?(id)
 
-      counts[id] += 1
+      # YouTube orders each related-videos list by relevance, so a
+      # candidate found near the top of a source's list is a stronger
+      # signal than one found near the bottom.
+      frequency_scores[id] += 1.0 / (position + 1)
       candidate_info[id] ||= related
       from_subscription << id if subscribed_ucids.includes?(related["ucid"])
     end
   end
 
-  ranked_ids = counts.keys.sort_by do |id|
-    score = counts[id]
-    score += SUBSCRIBED_BONUS if from_subscription.includes?(id)
-    -score
+  ranked_ids = frequency_scores.keys.sort_by do |id|
+    -final_score(frequency_scores[id], candidate_info[id], from_subscription.includes?(id))
   end
 
   # The full ranking is recomputed every page (no caching, see module
@@ -94,6 +98,34 @@ def rank_recommendations(
   videos = page_ids.map { |id| build_recommended_video(candidate_info[id]) }
 
   {videos, has_more}
+end
+
+# Combines the position/frequency signal with the secondary bumps: being
+# from a subscribed channel, the candidate's own popularity (log-scaled,
+# since view counts span several orders of magnitude), and recency (fades
+# linearly to 0 over RECENCY_WINDOW_DAYS — "slightly preferred", not a
+# hard requirement).
+private def final_score(frequency_score : Float64, info : Hash(String, String), subscribed : Bool) : Float64
+  score = frequency_score
+  score += SUBSCRIBED_BONUS if subscribed
+  score += Math.log10(short_text_to_number(info["short_view_count"]).to_f + 1) * VIEWS_WEIGHT
+  score += recency_bonus(info["published"])
+  score
+end
+
+private def recency_bonus(published : String) : Float64
+  return 0.0 if published.empty?
+
+  published_time = begin
+    Time.parse_rfc3339(published)
+  rescue
+    return 0.0
+  end
+
+  age_days = (Time.utc - published_time).total_days
+  return 0.0 if age_days < 0 || age_days > RECENCY_WINDOW_DAYS
+
+  (1.0 - age_days / RECENCY_WINDOW_DAYS) * RECENCY_WEIGHT
 end
 
 private def fetch_videos_concurrently(ids : Array(String)) : Array(Video)
