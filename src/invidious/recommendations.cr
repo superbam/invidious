@@ -17,7 +17,6 @@
 HISTORY_WINDOW    =  150
 RECOMMENDED_COUNT =   60
 SUBSCRIBED_BONUS  =    2
-FETCH_CONCURRENCY =   10
 
 record RecommendedVideo,
   id : String,
@@ -38,7 +37,7 @@ def fetch_recommendations(user : Invidious::User) : Array(RecommendedVideo)
   watched_set = user.watched.to_set
   subscribed_ucids = user.subscriptions.to_set
 
-  source_videos = fetch_videos_concurrently(user.watched.last(HISTORY_WINDOW))
+  source_videos = fetch_videos(user.watched.last(HISTORY_WINDOW))
 
   counts = Hash(String, Int32).new(0)
   from_subscription = Set(String).new
@@ -69,41 +68,18 @@ def fetch_recommendations(user : Invidious::User) : Array(RecommendedVideo)
   ranked_ids.first(RECOMMENDED_COUNT).map { |id| build_recommended_video(candidate_info[id]) }
 end
 
-private def fetch_videos_concurrently(ids : Array(String)) : Array(Video)
-  return [] of Video if ids.empty?
+private def fetch_videos(ids : Array(String)) : Array(Video)
+  videos = [] of Video
 
-  queue = ::Channel(String).new(ids.size)
-  ids.each { |id| queue.send(id) }
-  queue.close
-
-  results = [] of Video
-  mutex = Mutex.new
-  done = ::Channel(Nil).new
-
-  FETCH_CONCURRENCY.times do
-    spawn do
-      loop do
-        id = begin
-          queue.receive
-        rescue Channel::ClosedError
-          break
-        end
-
-        begin
-          video = get_video(id, refresh: false)
-          mutex.synchronize { results << video }
-        rescue
-          # Video unavailable/deleted since it was watched; skip it.
-        end
-      end
-
-      done.send(nil)
+  ids.each do |id|
+    begin
+      videos << get_video(id, refresh: false)
+    rescue
+      # Video unavailable/deleted since it was watched; skip it.
     end
   end
 
-  FETCH_CONCURRENCY.times { done.receive }
-
-  results
+  videos
 end
 
 private def build_recommended_video(info : Hash(String, String)) : RecommendedVideo
