@@ -180,7 +180,12 @@ module Invidious::Routes::Feeds
     user = user.as(User)
     preferences = user.preferences
 
-    videos = fetch_recommendations(user)
+    page = env.params.query["page"]?.try &.to_i?
+    page ||= 1
+
+    env.set "show_watched", true
+
+    videos, has_more = fetch_recommendations(user, page)
 
     if preferences.dearrow_titles || preferences.dearrow_thumbnails
       Invidious::Dearrow.prewarm(videos.map(&.id))

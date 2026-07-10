@@ -10,6 +10,15 @@
 
 <%= rendered "components/feed_menu" %>
 
+<script id="watched_data" type="application/json">
+<%=
+{
+    "csrf_token" => URI.encode_www_form(env.get?("csrf_token").try &.as(String) || "")
+}.to_pretty_json
+%>
+</script>
+<script src="/js/watched_widget.js?v=<%= ASSET_COMMIT %>"></script>
+
 <% if videos.empty? %>
     <p><%= I18n.translate(locale, "search_message_no_results") %></p>
 <% else %>
@@ -21,3 +30,11 @@
 <% end %>
 
 <script src="/js/watched_indicator.js?v=<%= ASSET_COMMIT %>"></script>
+
+<%=
+  IV::Frontend::Pagination.nav_numeric(locale,
+    base_url: "/feed/recommendations",
+    current_page: page,
+    show_next: has_more
+  )
+%>

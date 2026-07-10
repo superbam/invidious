@@ -34,7 +34,7 @@ record RecommendedVideo,
   end
 end
 
-def fetch_recommendations(user : Invidious::User) : Array(RecommendedVideo)
+def fetch_recommendations(user : Invidious::User, page : Int32 = 1) : {Array(RecommendedVideo), Bool}
   watched_set = user.watched.to_set
   subscribed_ucids = user.subscriptions.to_set
 
@@ -66,7 +66,17 @@ def fetch_recommendations(user : Invidious::User) : Array(RecommendedVideo)
     -score
   end
 
-  ranked_ids.first(RECOMMENDED_COUNT).map { |id| build_recommended_video(candidate_info[id]) }
+  # The full ranking is recomputed every page (no caching, see module
+  # comment history), so pagination only changes which slice gets turned
+  # into full RecommendedVideo objects to render — the underlying tally
+  # above is the same work either way.
+  offset = (page - 1) * RECOMMENDED_COUNT
+  page_ids = ranked_ids[offset, RECOMMENDED_COUNT]? || [] of String
+  has_more = ranked_ids.size > offset + page_ids.size
+
+  videos = page_ids.map { |id| build_recommended_video(candidate_info[id]) }
+
+  {videos, has_more}
 end
 
 private def fetch_videos_concurrently(ids : Array(String)) : Array(Video)
