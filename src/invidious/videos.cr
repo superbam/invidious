@@ -15,7 +15,7 @@ struct Video
   # NOTE: don't forget to bump this number if any change is made to
   # the `params` structure in videos/parser.cr!!!
   #
-  SCHEMA_VERSION = 3
+  SCHEMA_VERSION = 4
 
   property id : String
 
@@ -89,6 +89,12 @@ struct Video
 
   def related_videos
     info["relatedVideos"]?.try &.as_a.map { |h| h.as_h.transform_values &.as_s } || [] of Hash(String, String)
+  end
+
+  def chapters : Array(NamedTuple(title: String, start_seconds: Int32))
+    info["chapters"]?.try &.as_a.map { |c|
+      {title: c["title"].as_s, start_seconds: c["start_seconds"].as_i}
+    } || [] of NamedTuple(title: String, start_seconds: Int32)
   end
 
   # Methods for parsing streaming data

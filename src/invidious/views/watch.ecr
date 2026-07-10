@@ -67,6 +67,7 @@ we're going to need to do it here in order to allow for translations.
     "local_disabled" => CONFIG.disabled?("local"),
     "support_reddit" => true,
     "live_now" => video.live_now,
+    "chapters" => video.chapters.map { |c| {"time" => c[:start_seconds], "text" => c[:title]} },
     "sponsorblock_categories" => preferences.sponsorblock_categories,
     "dearrow_titles"          => preferences.dearrow_titles,
     "dearrow_thumbnails"      => preferences.dearrow_thumbnails,

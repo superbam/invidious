@@ -282,6 +282,21 @@ if (video_data.params.video_start > 0 || video_data.params.video_end > 0) {
     player.currentTime(video_data.params.video_start);
 }
 
+// Add chapter markers (YouTube-native chapters only, no description-timestamp fallback)
+if (Array.isArray(video_data.chapters) && video_data.chapters.length > 0) {
+    var chapter_markers = video_data.chapters.map(function (c) {
+        return { time: c.time, text: c.text, class: 'chapter-marker' };
+    });
+
+    // The markers plugin may or may not be initialised yet (it's
+    // initialised above only when video_start/end are set).
+    if (typeof player.markers === 'function') {
+        player.markers({ markers: chapter_markers });
+    } else {
+        player.markers.add(chapter_markers);
+    }
+}
+
 player.volume(video_data.params.volume / 100);
 player.playbackRate(video_data.params.speed);
 

@@ -55,6 +55,45 @@ module Invidious::Videos::Parser
     }
   end
 
+  # Chapters live in the "engagementPanels" section of the /next response
+  # (already merged into player_response alongside related videos, see
+  # extract_video_info), under a "macroMarkersListRenderer" panel — not in
+  # the player response itself. Creator-authored only; there's no fallback
+  # to parsing timestamps out of the description.
+  def parse_chapters(player_response : Hash(String, JSON::Any)) : Array(JSON::Any)
+    chapters = [] of JSON::Any
+
+    engagement_panels = player_response["engagementPanels"]?.try &.as_a
+    return chapters if !engagement_panels
+
+    marker_list_panel = engagement_panels.find do |panel|
+      panel.dig?("engagementPanelSectionListRenderer", "content", "macroMarkersListRenderer")
+    end
+    return chapters if !marker_list_panel
+
+    marker_list = marker_list_panel.dig?(
+      "engagementPanelSectionListRenderer", "content", "macroMarkersListRenderer", "contents"
+    ).try &.as_a
+    return chapters if !marker_list
+
+    marker_list.each do |item|
+      renderer = item["macroMarkersListItemRenderer"]?
+      next if !renderer
+
+      title = renderer.dig?("title", "simpleText").try &.as_s
+      start_seconds = renderer.dig?("onTap", "watchEndpoint", "startTimeSeconds").try &.as_i
+
+      next if !title || !start_seconds
+
+      chapters << JSON::Any.new({
+        "title"         => JSON::Any.new(title),
+        "start_seconds" => JSON::Any.new(start_seconds),
+      })
+    end
+
+    chapters
+  end
+
   def extract_video_info(video_id : String)
     # Fetch data from the player endpoint
     player_response = YoutubeAPI.player(video_id: video_id)
@@ -266,6 +305,10 @@ module Invidious::Videos::Parser
       end
     end
 
+    # Chapters
+
+    chapters = self.parse_chapters(player_response)
+
     # Likes
 
     toplevel_buttons = video_primary_renderer
@@ -425,6 +468,8 @@ module Invidious::Videos::Parser
       "isPostLiveDvr"    => JSON::Any.new(post_live_dvr),
       # Related videos
       "relatedVideos" => JSON::Any.new(related),
+      # Chapters
+      "chapters" => JSON::Any.new(chapters),
       # Description
       "description"      => JSON::Any.new(description || ""),
       "descriptionHtml"  => JSON::Any.new(description_html || "<p></p>"),
