@@ -9,7 +9,7 @@ HISTORY_WINDOW    =  150
 RECOMMENDED_COUNT =   60
 SUBSCRIBED_BONUS  =    2
 
-def fetch_recommendations(user : User) : Array(Video)
+def fetch_recommendations(user : Invidious::User) : Array(Video)
   watched_set = user.watched.to_set
   subscribed_ucids = user.subscriptions.to_set
 
