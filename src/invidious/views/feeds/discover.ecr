@@ -1,7 +1,7 @@
 <% content_for "header" do %>
 <title>
-    <% if env.get("preferences").as(Preferences).default_home != "Recommendations" %>
-        <%= I18n.translate(locale, "Recommendations") %> - Invidious
+    <% if env.get("preferences").as(Preferences).default_home != "Discover" %>
+        <%= I18n.translate(locale, "Discover") %> - Invidious
     <% else %>
         Invidious
     <% end %>
@@ -33,7 +33,7 @@
 
 <%=
   IV::Frontend::Pagination.nav_numeric(locale,
-    base_url: "/feed/recommendations",
+    base_url: "/feed/discover",
     current_page: page,
     show_next: has_more
   )

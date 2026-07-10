@@ -12,7 +12,8 @@ require "../src/invidious/search/ctoken"
 require "../src/invidious/trending"
 require "../src/invidious/user/preferences"
 require "../src/invidious/user/user"
-require "../src/invidious/recommendations"
+require "../src/invidious/jsonify/api_v1/common"
+require "../src/invidious/discover"
 require "spectator"
 
 Spectator.configure do |config|

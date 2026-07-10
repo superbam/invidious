@@ -1,5 +1,5 @@
-# Builds a personalized recommendation list from watch history: for a
-# bounded window of recently-watched videos, pull each one's cached "related
+# Builds a personalized "Discover" feed from watch history: for a bounded
+# window of recently-watched videos, pull each one's cached "related
 # videos" and score how often, how prominently, and how strongly each
 # candidate shows up across that window. Being from a subscribed channel,
 # the candidate's own popularity, and how recent it is are secondary
@@ -15,14 +15,14 @@
 # can't find in Postgres regardless of the `refresh` flag. Re-fetching ~60
 # of those one at a time was the entire cost of loading this page.
 HISTORY_WINDOW      =  150
-RECOMMENDED_COUNT   =   60
+DISCOVER_COUNT      =   60
 SUBSCRIBED_BONUS    =  0.5
 VIEWS_WEIGHT        = 0.15
 RECENCY_WEIGHT      =  0.5
 RECENCY_WINDOW_DAYS = 730
 FETCH_CONCURRENCY   =   10
 
-record RecommendedVideo,
+record DiscoverVideo,
   id : String,
   title : String,
   author : String,
@@ -35,28 +35,59 @@ record RecommendedVideo,
   def live_now
     false
   end
+
+  def to_json(locale : String?, json : JSON::Builder)
+    json.object do
+      json.field "type", "video"
+
+      json.field "title", self.title
+      json.field "videoId", self.id
+      json.field "videoThumbnails" do
+        Invidious::JSONify::APIv1.thumbnails(json, self.id)
+      end
+
+      json.field "lengthSeconds", self.length_seconds
+
+      json.field "author", self.author
+      json.field "authorId", self.ucid
+      json.field "authorUrl", "/channel/#{self.ucid}"
+      json.field "authorVerified", self.author_verified
+
+      json.field "published", self.published.to_unix
+      json.field "publishedText", I18n.translate(locale, "`x` ago", recode_date(self.published, locale))
+
+      json.field "viewCount", self.views
+      json.field "liveNow", self.live_now
+    end
+  end
+
+  def to_json(locale : String?, _json : Nil = nil)
+    JSON.build do |json|
+      to_json(locale, json)
+    end
+  end
 end
 
-def fetch_recommendations(user : Invidious::User, page : Int32 = 1) : {Array(RecommendedVideo), Bool}
+def fetch_discover(user : Invidious::User, page : Int32 = 1) : {Array(DiscoverVideo), Bool}
   source_videos = fetch_videos_concurrently(user.watched.last(HISTORY_WINDOW))
   related_lists = source_videos.map(&.related_videos)
 
-  rank_recommendations(related_lists, user.watched, user.subscriptions, page)
+  rank_discover(related_lists, user.watched, user.subscriptions, page)
 end
 
-# Pure ranking/exclusion logic, split out from fetch_recommendations so it's
+# Pure ranking/exclusion logic, split out from fetch_discover so it's
 # testable without a live DB or network call. `watched` and `subscriptions`
 # are always the user's *complete* history/subscriptions here — capping how
 # many watched videos are used as *sources* (HISTORY_WINDOW, applied by the
 # caller before this function ever sees the list) only limits how many
 # candidates get generated, it must never limit which candidates get
 # excluded for already being watched.
-def rank_recommendations(
+def rank_discover(
   related_lists : Array(Array(Hash(String, String))),
   watched : Array(String),
   subscriptions : Array(String),
   page : Int32 = 1,
-) : {Array(RecommendedVideo), Bool}
+) : {Array(DiscoverVideo), Bool}
   watched_set = watched.to_set
   subscribed_ucids = subscriptions.to_set
 
@@ -89,13 +120,13 @@ def rank_recommendations(
 
   # The full ranking is recomputed every page (no caching, see module
   # comment history), so pagination only changes which slice gets turned
-  # into full RecommendedVideo objects to render — the underlying tally
+  # into full DiscoverVideo objects to render — the underlying tally
   # above is the same work either way.
-  offset = (page - 1) * RECOMMENDED_COUNT
-  page_ids = ranked_ids[offset, RECOMMENDED_COUNT]? || [] of String
+  offset = (page - 1) * DISCOVER_COUNT
+  page_ids = ranked_ids[offset, DISCOVER_COUNT]? || [] of String
   has_more = ranked_ids.size > offset + page_ids.size
 
-  videos = page_ids.map { |id| build_recommended_video(candidate_info[id]) }
+  videos = page_ids.map { |id| build_discover_video(candidate_info[id]) }
 
   {videos, has_more}
 end
@@ -165,14 +196,14 @@ private def fetch_videos_concurrently(ids : Array(String)) : Array(Video)
   results
 end
 
-private def build_recommended_video(info : Hash(String, String)) : RecommendedVideo
+private def build_discover_video(info : Hash(String, String)) : DiscoverVideo
   published = begin
     Time.parse_rfc3339(info["published"])
   rescue
     Time.utc
   end
 
-  RecommendedVideo.new(
+  DiscoverVideo.new(
     id: info["id"],
     title: info["title"],
     author: info["author"],

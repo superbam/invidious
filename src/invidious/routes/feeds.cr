@@ -167,7 +167,7 @@ module Invidious::Routes::Feeds
     templated "feeds/history"
   end
 
-  def self.recommendations(env)
+  def self.discover(env)
     locale = env.get("preferences").as(Preferences).locale
 
     user = env.get? "user"
@@ -185,13 +185,13 @@ module Invidious::Routes::Feeds
 
     env.set "show_watched", true
 
-    videos, has_more = fetch_recommendations(user, page)
+    videos, has_more = fetch_discover(user, page)
 
     if preferences.dearrow_titles || preferences.dearrow_thumbnails
       Invidious::Dearrow.prewarm(videos.map(&.id))
     end
 
-    templated "feeds/recommendations"
+    templated "feeds/discover"
   end
 
   # RSS feeds

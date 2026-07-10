@@ -18,14 +18,14 @@ private def fake_related(
   }
 end
 
-Spectator.describe "rank_recommendations" do
+Spectator.describe "rank_discover" do
   it "excludes a candidate found anywhere in the full watch history, not just the recent window used to generate candidates" do
     # "old_watched" simulates a video watched long ago — outside whatever
     # window the caller used to pick which videos to walk for candidates —
     # while still being present in the *full* watched list passed in here.
     related_lists = [[fake_related("old_watched"), fake_related("fresh_candidate")]]
 
-    videos, _has_more = rank_recommendations(related_lists, ["old_watched"], [] of String)
+    videos, _has_more = rank_discover(related_lists, ["old_watched"], [] of String)
 
     ids = videos.map(&.id)
     expect(ids).to_not contain("old_watched")
@@ -35,7 +35,7 @@ Spectator.describe "rank_recommendations" do
   it "includes candidates that aren't in watch history" do
     related_lists = [[fake_related("candidate_a")]]
 
-    videos, _has_more = rank_recommendations(related_lists, [] of String, [] of String)
+    videos, _has_more = rank_discover(related_lists, [] of String, [] of String)
 
     expect(videos.map(&.id)).to eq(["candidate_a"])
   end
@@ -46,7 +46,7 @@ Spectator.describe "rank_recommendations" do
       [fake_related("popular")],
     ]
 
-    videos, _has_more = rank_recommendations(related_lists, [] of String, [] of String)
+    videos, _has_more = rank_discover(related_lists, [] of String, [] of String)
 
     expect(videos.map(&.id)).to eq(["popular", "rare"])
   end
@@ -58,7 +58,7 @@ Spectator.describe "rank_recommendations" do
       [fake_related("top"), fake_related("buried")],
     ]
 
-    videos, _has_more = rank_recommendations(related_lists, [] of String, [] of String)
+    videos, _has_more = rank_discover(related_lists, [] of String, [] of String)
 
     expect(videos.map(&.id)).to eq(["top", "buried"])
   end
@@ -71,7 +71,7 @@ Spectator.describe "rank_recommendations" do
       [fake_related("from_other", ucid: "UC_other")],
     ]
 
-    videos, _has_more = rank_recommendations(related_lists, [] of String, ["UC_subscribed"])
+    videos, _has_more = rank_discover(related_lists, [] of String, ["UC_subscribed"])
 
     expect(videos.map(&.id)).to eq(["from_subscribed", "from_other"])
   end
@@ -82,7 +82,7 @@ Spectator.describe "rank_recommendations" do
       [fake_related("fewer_views", views: "100")],
     ]
 
-    videos, _has_more = rank_recommendations(related_lists, [] of String, [] of String)
+    videos, _has_more = rank_discover(related_lists, [] of String, [] of String)
 
     expect(videos.map(&.id)).to eq(["more_views", "fewer_views"])
   end
@@ -93,7 +93,7 @@ Spectator.describe "rank_recommendations" do
       [fake_related("older", published: (Time.utc - 700.days).to_rfc3339)],
     ]
 
-    videos, _has_more = rank_recommendations(related_lists, [] of String, [] of String)
+    videos, _has_more = rank_discover(related_lists, [] of String, [] of String)
 
     expect(videos.map(&.id)).to eq(["newer", "older"])
   end
@@ -106,18 +106,18 @@ Spectator.describe "rank_recommendations" do
       [fake_related("weak_signal", views: "50M", published: (Time.utc - 1.day).to_rfc3339)],
     ]
 
-    videos, _has_more = rank_recommendations(related_lists, [] of String, [] of String)
+    videos, _has_more = rank_discover(related_lists, [] of String, [] of String)
 
     expect(videos.map(&.id)).to eq(["strong_signal", "weak_signal"])
   end
 
   it "paginates: has_more is true when more candidates remain, false on the last page" do
-    related_lists = [(0...(RECOMMENDED_COUNT + 5)).map { |i| fake_related("video_#{i}") }]
+    related_lists = [(0...(DISCOVER_COUNT + 5)).map { |i| fake_related("video_#{i}") }]
 
-    page1, has_more1 = rank_recommendations(related_lists, [] of String, [] of String, page: 1)
-    page2, has_more2 = rank_recommendations(related_lists, [] of String, [] of String, page: 2)
+    page1, has_more1 = rank_discover(related_lists, [] of String, [] of String, page: 1)
+    page2, has_more2 = rank_discover(related_lists, [] of String, [] of String, page: 2)
 
-    expect(page1.size).to eq(RECOMMENDED_COUNT)
+    expect(page1.size).to eq(DISCOVER_COUNT)
     expect(has_more1).to be_true
 
     expect(page2.size).to eq(5)

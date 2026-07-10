@@ -102,7 +102,7 @@ module Invidious::Routing
     get "/feed/subscriptions", Routes::Feeds, :subscriptions
     get "/feed/subscriptions/backfill_shorts", Routes::Feeds, :backfill_shorts
     get "/feed/history", Routes::Feeds, :history
-    get "/feed/recommendations", Routes::Feeds, :recommendations
+    get "/feed/discover", Routes::Feeds, :discover
 
     # RSS Feeds
     get "/feed/channel/:ucid", Routes::Feeds, :rss_channel
@@ -310,6 +310,8 @@ module Invidious::Routing
       delete "/api/v1/auth/positions/:id", {{namespace}}::Authenticated, :delete_position
 
       get "/api/v1/auth/feed", {{namespace}}::Authenticated, :feed
+
+      get "/api/v1/auth/discover", {{namespace}}::Authenticated, :get_discover
 
       get "/api/v1/auth/subscriptions", {{namespace}}::Authenticated, :get_subscriptions
       post "/api/v1/auth/subscriptions/:ucid", {{namespace}}::Authenticated, :subscribe_channel

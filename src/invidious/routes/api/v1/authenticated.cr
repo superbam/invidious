@@ -74,6 +74,31 @@ module Invidious::Routes::API::V1::Authenticated
     return watched.to_json
   end
 
+  def self.get_discover(env)
+    env.response.content_type = "application/json"
+    user = env.get("user").as(User)
+    locale = env.get("preferences").as(Preferences).locale
+
+    page = env.params.query["page"]?.try &.to_i?.try &.clamp(0, Int32::MAX)
+    page ||= 1
+
+    videos, has_more = fetch_discover(user, page)
+
+    JSON.build do |json|
+      json.object do
+        json.field "videos" do
+          json.array do
+            videos.each do |video|
+              video.to_json(locale, json)
+            end
+          end
+        end
+
+        json.field "hasMore", has_more
+      end
+    end
+  end
+
   def self.mark_watched(env)
     user = env.get("user").as(User)
 
