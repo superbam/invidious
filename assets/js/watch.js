@@ -216,7 +216,15 @@ if (video_data.dearrow_titles || video_data.dearrow_thumbnails) {
                 if (best_thumb) {
                     var thumb_url = '/api/v1/dearrow/thumbnail/' + video_data.id +
                                     '?time=' + best_thumb.timestamp;
-                    player.poster(thumb_url);
+                    // The thumbnail may not be generated/cached yet (async job
+                    // queue on DeArrow's end), in which case the request fails.
+                    // Preload it so a failure doesn't clobber the working poster
+                    // that's already showing.
+                    var preload = new Image();
+                    preload.onload = function () {
+                        player.poster(thumb_url);
+                    };
+                    preload.src = thumb_url;
                 }
             }
         },

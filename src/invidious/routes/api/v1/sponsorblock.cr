@@ -105,7 +105,10 @@ module Invidious::Routes::API::V1::SponsorBlock
         env.response.content_type = response.headers["Content-Type"]? || "image/jpeg"
         env.response.headers["Cache-Control"] = "public, max-age=3600"
         return response.body
-      when 404
+      when 404, 204
+        # 204 means the thumbnail hasn't been generated/cached yet (async job
+        # queue); treat it the same as "not available" rather than as an error,
+        # and never attach a JSON body to a 204 status (HTTP forbids it).
         env.response.content_type = "application/json"
         return error_json(404, "No thumbnail available")
       else
