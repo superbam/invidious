@@ -1,0 +1,23 @@
+<% content_for "header" do %>
+<title>
+    <% if env.get("preferences").as(Preferences).default_home != "Recommendations" %>
+        <%= I18n.translate(locale, "Recommendations") %> - Invidious
+    <% else %>
+        Invidious
+    <% end %>
+</title>
+<% end %>
+
+<%= rendered "components/feed_menu" %>
+
+<% if videos.empty? %>
+    <p><%= I18n.translate(locale, "search_message_no_results") %></p>
+<% else %>
+    <div class="pure-g">
+    <% videos.each do |item| %>
+        <%= rendered "components/item" %>
+    <% end %>
+    </div>
+<% end %>
+
+<script src="/js/watched_indicator.js?v=<%= ASSET_COMMIT %>"></script>

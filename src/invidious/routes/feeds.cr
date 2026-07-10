@@ -167,6 +167,28 @@ module Invidious::Routes::Feeds
     templated "feeds/history"
   end
 
+  def self.recommendations(env)
+    locale = env.get("preferences").as(Preferences).locale
+
+    user = env.get? "user"
+    referer = get_referer(env)
+
+    if !user
+      return env.redirect referer
+    end
+
+    user = user.as(User)
+    preferences = user.preferences
+
+    videos = fetch_recommendations(user)
+
+    if preferences.dearrow_titles || preferences.dearrow_thumbnails
+      Invidious::Dearrow.prewarm(videos.map(&.id))
+    end
+
+    templated "feeds/recommendations"
+  end
+
   # RSS feeds
 
   def self.rss_channel(env)

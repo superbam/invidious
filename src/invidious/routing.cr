@@ -102,6 +102,7 @@ module Invidious::Routing
     get "/feed/subscriptions", Routes::Feeds, :subscriptions
     get "/feed/subscriptions/backfill_shorts", Routes::Feeds, :backfill_shorts
     get "/feed/history", Routes::Feeds, :history
+    get "/feed/recommendations", Routes::Feeds, :recommendations
 
     # RSS Feeds
     get "/feed/channel/:ucid", Routes::Feeds, :rss_channel
