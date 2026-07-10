@@ -35,21 +35,38 @@ record RecommendedVideo,
 end
 
 def fetch_recommendations(user : Invidious::User, page : Int32 = 1) : {Array(RecommendedVideo), Bool}
-  watched_set = user.watched.to_set
-  subscribed_ucids = user.subscriptions.to_set
-
   source_videos = fetch_videos_concurrently(user.watched.last(HISTORY_WINDOW))
+  related_lists = source_videos.map(&.related_videos)
+
+  rank_recommendations(related_lists, user.watched, user.subscriptions, page)
+end
+
+# Pure ranking/exclusion logic, split out from fetch_recommendations so it's
+# testable without a live DB or network call. `watched` and `subscriptions`
+# are always the user's *complete* history/subscriptions here — capping how
+# many watched videos are used as *sources* (HISTORY_WINDOW, applied by the
+# caller before this function ever sees the list) only limits how many
+# candidates get generated, it must never limit which candidates get
+# excluded for already being watched.
+def rank_recommendations(
+  related_lists : Array(Array(Hash(String, String))),
+  watched : Array(String),
+  subscriptions : Array(String),
+  page : Int32 = 1,
+) : {Array(RecommendedVideo), Bool}
+  watched_set = watched.to_set
+  subscribed_ucids = subscriptions.to_set
 
   counts = Hash(String, Int32).new(0)
   from_subscription = Set(String).new
   candidate_info = Hash(String, Hash(String, String)).new
 
-  source_videos.each do |source_video|
+  related_lists.each do |related_videos|
     # De-dupe within one source video's own related list, so a single
     # heavily-cross-linked video can't dominate the tally by itself.
     seen_in_source = Set(String).new
 
-    source_video.related_videos.each do |related|
+    related_videos.each do |related|
       id = related["id"]
       next if watched_set.includes?(id)
       next unless seen_in_source.add?(id)

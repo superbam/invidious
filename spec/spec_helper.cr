@@ -10,6 +10,9 @@ require "../src/invidious/videos"
 require "../src/invidious/playlists"
 require "../src/invidious/search/ctoken"
 require "../src/invidious/trending"
+require "../src/invidious/user/preferences"
+require "../src/invidious/user/user"
+require "../src/invidious/recommendations"
 require "spectator"
 
 Spectator.configure do |config|
