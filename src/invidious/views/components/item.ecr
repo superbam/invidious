@@ -146,7 +146,7 @@
                         <%# shorts-filter: hi-DPI srcset. maxres.jpg is Invidious's %>
                         <%# server-side "best available" endpoint (falls back maxres->sd->hq), %>
                         <%# so the 1280w candidate is sharp on hi-res displays and never 404s. %>
-                        <img loading="lazy" class="thumbnail" src="/vi/<%= item.id %>/mqdefault.jpg" srcset="/vi/<%= item.id %>/mqdefault.jpg 320w, /vi/<%= item.id %>/hqdefault.jpg 480w, /vi/<%= item.id %>/maxres.jpg 1280w" sizes="(max-width: 767px) 100vw, 25vw" alt="" />
+                        <img loading="lazy" class="thumbnail" data-video-id="<%= item.id %>" src="/vi/<%= item.id %>/mqdefault.jpg" srcset="/vi/<%= item.id %>/mqdefault.jpg 320w, /vi/<%= item.id %>/hqdefault.jpg 480w, /vi/<%= item.id %>/maxres.jpg 1280w" sizes="(max-width: 767px) 100vw, 25vw" alt="" />
 
                         <% if item_watched %>
                             <div class="watched-overlay"></div>
@@ -199,7 +199,7 @@
             </div>
 
             <div class="video-card-row">
-                <a href="<%= link_url %>"><p dir="auto"><%= HTML.escape(item.title) %></p></a>
+                <a href="<%= link_url %>" class="dearrow-title" data-video-id="<%= item.id %>"><p dir="auto"><%= HTML.escape(item.title) %></p></a>
             </div>
 
             <div class="video-card-row flexible">

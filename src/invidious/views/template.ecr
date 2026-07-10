@@ -185,6 +185,17 @@
     </div>
     <script src="/js/handlers.js?v=<%= ASSET_COMMIT %>"></script>
     <script src="/js/themes.js?v=<%= ASSET_COMMIT %>"></script>
+    <% if preferences.dearrow_titles || preferences.dearrow_thumbnails %>
+        <script id="dearrow_feed_data" type="application/json">
+        <%=
+        {
+            "dearrow_titles" => preferences.dearrow_titles,
+            "dearrow_thumbnails" => preferences.dearrow_thumbnails,
+        }.to_pretty_json
+        %>
+        </script>
+        <script src="/js/dearrow_feed.js?v=<%= ASSET_COMMIT %>"></script>
+    <% end %>
     <% if env.get? "user" %>
         <script src="/js/sse.js?v=<%= ASSET_COMMIT %>"></script>
         <script id="notification_data" type="application/json">
