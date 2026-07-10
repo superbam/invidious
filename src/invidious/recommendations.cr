@@ -5,24 +5,46 @@
 # a subscribed channel is a secondary signal: it nudges the score of a
 # candidate that already showed up this way, it doesn't add candidates of
 # its own.
+#
+# Candidates are rendered straight from the lightweight related-video data
+# collected along the way (title/author/ucid/length/rough view count) rather
+# than re-fetched individually: unlike the *source* videos (which are
+# guaranteed already cached, since watching one is what caused it to be
+# fetched), a "related but never watched" candidate usually isn't cached
+# yet, and get_video() always does a live YouTube fetch for anything it
+# can't find in Postgres regardless of the `refresh` flag. Re-fetching ~60
+# of those one at a time was the entire cost of loading this page.
 HISTORY_WINDOW    =  150
 RECOMMENDED_COUNT =   60
 SUBSCRIBED_BONUS  =    2
+FETCH_CONCURRENCY =   10
 
-def fetch_recommendations(user : Invidious::User) : Array(Video)
+record RecommendedVideo,
+  id : String,
+  title : String,
+  author : String,
+  ucid : String,
+  length_seconds : Int32,
+  views : Int64,
+  published : Time,
+  author_verified : Bool,
+  premiere_timestamp : Time? = nil do
+  def live_now
+    false
+  end
+end
+
+def fetch_recommendations(user : Invidious::User) : Array(RecommendedVideo)
   watched_set = user.watched.to_set
   subscribed_ucids = user.subscriptions.to_set
 
+  source_videos = fetch_videos_concurrently(user.watched.last(HISTORY_WINDOW))
+
   counts = Hash(String, Int32).new(0)
   from_subscription = Set(String).new
+  candidate_info = Hash(String, Hash(String, String)).new
 
-  user.watched.last(HISTORY_WINDOW).each do |source_id|
-    source_video = begin
-      get_video(source_id, refresh: false)
-    rescue
-      next
-    end
-
+  source_videos.each do |source_video|
     # De-dupe within one source video's own related list, so a single
     # heavily-cross-linked video can't dominate the tally by itself.
     seen_in_source = Set(String).new
@@ -33,6 +55,7 @@ def fetch_recommendations(user : Invidious::User) : Array(Video)
       next unless seen_in_source.add?(id)
 
       counts[id] += 1
+      candidate_info[id] ||= related
       from_subscription << id if subscribed_ucids.includes?(related["ucid"])
     end
   end
@@ -43,16 +66,61 @@ def fetch_recommendations(user : Invidious::User) : Array(Video)
     -score
   end
 
-  videos = [] of Video
-  ranked_ids.each do |id|
-    break if videos.size >= RECOMMENDED_COUNT
+  ranked_ids.first(RECOMMENDED_COUNT).map { |id| build_recommended_video(candidate_info[id]) }
+end
 
-    begin
-      videos << get_video(id, refresh: false)
-    rescue
-      next
+private def fetch_videos_concurrently(ids : Array(String)) : Array(Video)
+  return [] of Video if ids.empty?
+
+  queue = ::Channel(String).new(ids.size)
+  ids.each { |id| queue.send(id) }
+  queue.close
+
+  results = [] of Video
+  mutex = Mutex.new
+  done = ::Channel(Nil).new
+
+  FETCH_CONCURRENCY.times do
+    spawn do
+      loop do
+        id = begin
+          queue.receive
+        rescue Channel::ClosedError
+          break
+        end
+
+        begin
+          video = get_video(id, refresh: false)
+          mutex.synchronize { results << video }
+        rescue
+          # Video unavailable/deleted since it was watched; skip it.
+        end
+      end
+
+      done.send(nil)
     end
   end
 
-  videos
+  FETCH_CONCURRENCY.times { done.receive }
+
+  results
+end
+
+private def build_recommended_video(info : Hash(String, String)) : RecommendedVideo
+  published = begin
+    Time.parse_rfc3339(info["published"])
+  rescue
+    Time.utc
+  end
+
+  RecommendedVideo.new(
+    id: info["id"],
+    title: info["title"],
+    author: info["author"],
+    ucid: info["ucid"],
+    length_seconds: info["length_seconds"].to_i? || 0,
+    views: short_text_to_number(info["short_view_count"]),
+    published: published,
+    author_verified: info["author_verified"] == "true",
+  )
 end
