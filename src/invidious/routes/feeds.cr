@@ -32,9 +32,14 @@ module Invidious::Routes::Feeds
   end
 
   def self.popular(env)
-    locale = env.get("preferences").as(Preferences).locale
+    preferences = env.get("preferences").as(Preferences)
+    locale = preferences.locale
 
     if CONFIG.popular_enabled
+      if preferences.dearrow_titles || preferences.dearrow_thumbnails
+        Invidious::Dearrow.prewarm(popular_videos.map(&.id))
+      end
+
       templated "feeds/popular"
     else
       message = I18n.translate(locale, "The Popular feed has been disabled by the administrator.")
@@ -56,6 +61,10 @@ module Invidious::Routes::Feeds
       trending, plid = fetch_trending(trending_type, region, locale)
     rescue ex
       return error_template(500, ex)
+    end
+
+    if preferences.dearrow_titles || preferences.dearrow_thumbnails
+      Invidious::Dearrow.prewarm(trending.select(SearchVideo).map(&.id))
     end
 
     templated "feeds/trending"
@@ -100,6 +109,10 @@ module Invidious::Routes::Feeds
     # <<< shorts-filter
 
     videos, notifications = get_subscription_feed(user, max_results, page, current_view)
+
+    if user.preferences.dearrow_titles || user.preferences.dearrow_thumbnails
+      Invidious::Dearrow.prewarm((videos + notifications).map(&.id))
+    end
 
     if CONFIG.enable_user_notifications
       # "updated" here is used for delivering new notifications, so if

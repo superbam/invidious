@@ -443,7 +443,8 @@ module Invidious::Routes::Playlists
   end
 
   def self.mix(env)
-    locale = env.get("preferences").as(Preferences).locale
+    preferences = env.get("preferences").as(Preferences)
+    locale = preferences.locale
 
     rdid = env.params.query["list"]?
     if !rdid
@@ -457,6 +458,10 @@ module Invidious::Routes::Playlists
       mix = fetch_mix(rdid, continuation, locale: locale)
     rescue ex
       return error_template(500, ex)
+    end
+
+    if preferences.dearrow_titles || preferences.dearrow_thumbnails
+      Invidious::Dearrow.prewarm(mix.videos.map(&.id))
     end
 
     templated "mix"
