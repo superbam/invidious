@@ -133,8 +133,26 @@ body a.channel-owner {
   flex-wrap: wrap;
 }
 
+.pure-checkbox-label {
+  display: inline-flex;
+  align-items: center;
+  margin-right: 12px;
+  font-weight: normal;
+}
+
+.pure-checkbox-label input[type="checkbox"] {
+  margin-right: 4px;
+}
+
 .feed-menu-item {
   text-align: center;
+  padding: 4px 10px;
+  border: 2px solid transparent;
+  border-radius: 8px;
+}
+
+.feed-menu-item.selected {
+  border-color: currentColor;
 }
 
 @media screen and (max-width: 640px) {

@@ -210,8 +210,10 @@
 
             <% if env.get?("user") %>
                 <% feed_options = {"", "Popular", "Trending", "Subscriptions", "Playlists"} %>
+                <% feed_menu_options = {"Popular", "Trending", "Subscriptions", "Playlists", "Watch history", "Discover"} %>
             <% else %>
                 <% feed_options = {"", "Popular", "Trending"} %>
+                <% feed_menu_options = {"Popular", "Trending"} %>
             <% end %>
 
             <div class="pure-control-group">
@@ -225,13 +227,15 @@
 
             <div class="pure-control-group">
                 <label for="feed_menu"><%= I18n.translate(locale, "preferences_feed_menu_label") %></label>
-                <% (feed_options.size - 1).times do |index| %>
-                    <select name="feed_menu[<%= index %>]" id="feed_menu[<%= index %>]">
-                        <% feed_options.each do |option| %>
-                            <option value="<%= option %>" <% if preferences.feed_menu[index]? == option %> selected <% end %>><%= I18n.translate(locale, option.blank? ? "Search" : option) %></option>
-                        <% end %>
-                    </select>
-                <% end %>
+                <div id="feed_menu">
+                    <% feed_menu_options.each do |option| %>
+                        <% field_name = "feed_menu_#{option.downcase.gsub(" ", "_")}" %>
+                        <label class="pure-checkbox-label" for="<%= field_name %>">
+                            <input type="checkbox" name="<%= field_name %>" id="<%= field_name %>" <% if preferences.feed_menu.includes? option %>checked<% end %>>
+                            <%= I18n.translate(locale, option) %>
+                        </label>
+                    <% end %>
+                </div>
             </div>
             <% if env.get? "user" %>
                 <div class="pure-control-group">
@@ -338,13 +342,15 @@
 
                 <div class="pure-control-group">
                     <label for="admin_feed_menu"><%= I18n.translate(locale, "preferences_feed_menu_label") %></label>
-                    <% (feed_options.size - 1).times do |index| %>
-                        <select name="admin_feed_menu[<%= index %>]" id="admin_feed_menu[<%= index %>]">
-                            <% feed_options.each do |option| %>
-                                <option value="<%= option %>" <% if CONFIG.default_user_preferences.feed_menu[index]? == option %> selected <% end %>><%= I18n.translate(locale, option.blank? ? "none" : option) %></option>
-                            <% end %>
-                        </select>
-                    <% end %>
+                    <div id="admin_feed_menu">
+                        <% feed_menu_options.each do |option| %>
+                            <% field_name = "admin_feed_menu_#{option.downcase.gsub(" ", "_")}" %>
+                            <label class="pure-checkbox-label" for="<%= field_name %>">
+                                <input type="checkbox" name="<%= field_name %>" id="<%= field_name %>" <% if CONFIG.default_user_preferences.feed_menu.includes? option %>checked<% end %>>
+                                <%= I18n.translate(locale, option) %>
+                            </label>
+                        <% end %>
+                    </div>
                 </div>
 
                 <div class="pure-control-group">

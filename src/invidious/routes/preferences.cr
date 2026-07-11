@@ -1,6 +1,15 @@
 {% skip_file if flag?(:api_only) %}
 
 module Invidious::Routes::PreferencesRoute
+  FEED_MENU_TABS = ["Popular", "Trending", "Subscriptions", "Playlists", "Watch history", "Discover"]
+
+  private def self.parse_feed_menu(env, prefix : String) : Array(String)
+    FEED_MENU_TABS.select do |tab|
+      field_name = "#{prefix}_#{tab.downcase.gsub(" ", "_")}"
+      env.params.body[field_name]?.try &.as(String) == "on"
+    end
+  end
+
   def self.show(env)
     preferences = env.get("preferences").as(Preferences)
     locale = preferences.locale
@@ -105,13 +114,7 @@ module Invidious::Routes::PreferencesRoute
 
     default_home = env.params.body["default_home"]?.try &.as(String) || CONFIG.default_user_preferences.default_home
 
-    feed_menu = [] of String
-    4.times do |index|
-      option = env.params.body["feed_menu[#{index}]"]?.try &.as(String) || ""
-      if !option.empty?
-        feed_menu << option
-      end
-    end
+    feed_menu = parse_feed_menu(env, "feed_menu")
 
     automatic_instance_redirect = env.params.body["automatic_instance_redirect"]?.try &.as(String)
     automatic_instance_redirect ||= "off"
@@ -227,14 +230,7 @@ module Invidious::Routes::PreferencesRoute
       if CONFIG.admins.includes? user.email
         CONFIG.default_user_preferences.default_home = env.params.body["admin_default_home"]?.try &.as(String) || CONFIG.default_user_preferences.default_home
 
-        admin_feed_menu = [] of String
-        4.times do |index|
-          option = env.params.body["admin_feed_menu[#{index}]"]?.try &.as(String) || ""
-          if !option.empty?
-            admin_feed_menu << option
-          end
-        end
-        CONFIG.default_user_preferences.feed_menu = admin_feed_menu
+        CONFIG.default_user_preferences.feed_menu = parse_feed_menu(env, "admin_feed_menu")
 
         popular_enabled = env.params.body["popular_enabled"]?.try &.as(String)
         popular_enabled ||= "off"

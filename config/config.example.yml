@@ -712,16 +712,16 @@ default_user_preferences:
   ##
   ## List of feeds available on the home page.
   ##
-  ## Note: "Subscriptions" and "Playlists" are only visible
-  ## when the user is logged in.
+  ## Note: "Subscriptions", "Playlists", "Watch history", and "Discover"
+  ## are only visible when the user is logged in.
   ##
   ## Accepted values: A list of strings
   ## Each entry can be one of: "Popular", "Trending",
-  ##    "Subscriptions", "Playlists"
+  ##    "Subscriptions", "Playlists", "Watch history", "Discover"
   ##
-  ## Default: ["Popular", "Trending", "Subscriptions", "Playlists"]  (show all feeds)
+  ## Default: ["Popular", "Trending", "Subscriptions", "Playlists", "Watch history", "Discover"]  (show all feeds)
   ##
-  #feed_menu: ["Popular", "Trending", "Subscriptions", "Playlists"]
+  #feed_menu: ["Popular", "Trending", "Subscriptions", "Playlists", "Watch history", "Discover"]
 
   ##
   ## Default feed to display on the home page.
