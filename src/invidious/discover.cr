@@ -1,10 +1,15 @@
 # Builds a personalized "Discover" feed from watch history: for a bounded
 # window of recently-watched videos, pull each one's cached "related
 # videos" and score how often, how prominently, and how strongly each
-# candidate shows up across that window. Being from a subscribed channel,
-# the candidate's own popularity, and how recent it is are secondary
-# signals layered on top — they nudge the score of a candidate that
-# already showed up this way, they don't add candidates of their own.
+# candidate shows up across that window. The goal is surfacing channels
+# you *don't* already know, not more of what's already in your
+# subscriptions feed — so a subscribed-channel candidate is penalized
+# rather than boosted, and only candidates that are either genuinely
+# popular or strongly/repeatedly recommended make the cut at all
+# (QUALIFIES_MIN_VIEWS / QUALIFIES_MIN_FREQUENCY below — "and/or", either
+# bar is enough). "Highly rated" isn't something YouTube's API exposes
+# per-video anymore (no public like/dislike ratio), so it's read here as
+# "strongly vouched for by more than one thing you watched".
 #
 # Candidates are rendered straight from the lightweight related-video data
 # collected along the way (title/author/ucid/length/rough view count) rather
@@ -14,13 +19,15 @@
 # yet, and get_video() always does a live YouTube fetch for anything it
 # can't find in Postgres regardless of the `refresh` flag. Re-fetching ~60
 # of those one at a time was the entire cost of loading this page.
-HISTORY_WINDOW      =  150
-DISCOVER_COUNT      =   60
-SUBSCRIBED_BONUS    =  0.5
-VIEWS_WEIGHT        = 0.15
-RECENCY_WEIGHT      =  0.5
-RECENCY_WINDOW_DAYS = 730
-FETCH_CONCURRENCY   =   10
+HISTORY_WINDOW           =  150
+DISCOVER_COUNT           =   24
+SUBSCRIBED_PENALTY       = -1.5
+VIEWS_WEIGHT             = 0.15
+RECENCY_WEIGHT           =  0.5
+RECENCY_WINDOW_DAYS      = 730
+QUALIFIES_MIN_VIEWS      = 100_000
+QUALIFIES_MIN_FREQUENCY  =    1.5
+FETCH_CONCURRENCY        =   10
 
 record DiscoverVideo,
   id : String,
@@ -114,7 +121,12 @@ def rank_discover(
     end
   end
 
-  ranked_ids = frequency_scores.keys.sort_by do |id|
+  qualifying_ids = frequency_scores.keys.select do |id|
+    views = short_text_to_number(candidate_info[id]["short_view_count"])
+    views >= QUALIFIES_MIN_VIEWS || frequency_scores[id] >= QUALIFIES_MIN_FREQUENCY
+  end
+
+  ranked_ids = qualifying_ids.sort_by do |id|
     -final_score(frequency_scores[id], candidate_info[id], from_subscription.includes?(id))
   end
 
@@ -131,14 +143,16 @@ def rank_discover(
   {videos, has_more}
 end
 
-# Combines the position/frequency signal with the secondary bumps: being
-# from a subscribed channel, the candidate's own popularity (log-scaled,
-# since view counts span several orders of magnitude), and recency (fades
-# linearly to 0 over RECENCY_WINDOW_DAYS — "slightly preferred", not a
-# hard requirement).
+# Combines the position/frequency signal with the secondary bumps: a
+# subscribed-channel candidate gets pushed down (this feed is for finding
+# channels you don't already follow — see module comment), while the
+# candidate's own popularity (log-scaled, since view counts span several
+# orders of magnitude) and recency (fades linearly to 0 over
+# RECENCY_WINDOW_DAYS — "slightly preferred", not a hard requirement) both
+# nudge it up.
 private def final_score(frequency_score : Float64, info : Hash(String, String), subscribed : Bool) : Float64
   score = frequency_score
-  score += SUBSCRIBED_BONUS if subscribed
+  score += SUBSCRIBED_PENALTY if subscribed
   score += Math.log10(short_text_to_number(info["short_view_count"]).to_f + 1) * VIEWS_WEIGHT
   score += recency_bonus(info["published"])
   score

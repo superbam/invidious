@@ -3,7 +3,7 @@ require "../spec_helper"
 private def fake_related(
   id : String,
   ucid : String = "UC_default",
-  views : String = "100",
+  views : String = "500000",
   published : String = "",
 ) : Hash(String, String)
   {
@@ -63,7 +63,7 @@ Spectator.describe "rank_discover" do
     expect(videos.map(&.id)).to eq(["top", "buried"])
   end
 
-  it "gives a subscribed channel's candidate a bump over an equally-ranked, equally-suggested one" do
+  it "penalizes a subscribed channel's candidate relative to an equally-ranked, equally-suggested one, to favor new channels" do
     # Same position (0) in separate source lists, so frequency/position
     # scores tie exactly — the only difference is subscription status.
     related_lists = [
@@ -73,18 +73,45 @@ Spectator.describe "rank_discover" do
 
     videos, _has_more = rank_discover(related_lists, [] of String, ["UC_subscribed"])
 
-    expect(videos.map(&.id)).to eq(["from_subscribed", "from_other"])
+    expect(videos.map(&.id)).to eq(["from_other", "from_subscribed"])
   end
 
   it "gives a more-viewed candidate a bump over an equally-ranked, equally-suggested one" do
     related_lists = [
       [fake_related("more_views", views: "5M")],
-      [fake_related("fewer_views", views: "100")],
+      [fake_related("fewer_views", views: "200000")],
     ]
 
     videos, _has_more = rank_discover(related_lists, [] of String, [] of String)
 
     expect(videos.map(&.id)).to eq(["more_views", "fewer_views"])
+  end
+
+  it "excludes a candidate that's neither popular nor strongly/repeatedly suggested" do
+    related_lists = [[fake_related("niche", views: "50")]]
+
+    videos, _has_more = rank_discover(related_lists, [] of String, [] of String)
+
+    expect(videos.map(&.id)).to_not contain("niche")
+  end
+
+  it "includes a low-view candidate anyway if it's strongly suggested across enough sources" do
+    related_lists = [
+      [fake_related("consensus_pick", views: "50")],
+      [fake_related("consensus_pick", views: "50")],
+    ]
+
+    videos, _has_more = rank_discover(related_lists, [] of String, [] of String)
+
+    expect(videos.map(&.id)).to contain("consensus_pick")
+  end
+
+  it "includes a candidate with few appearances anyway if it's genuinely popular" do
+    related_lists = [[fake_related("viral_but_new_to_you", views: "10M")]]
+
+    videos, _has_more = rank_discover(related_lists, [] of String, [] of String)
+
+    expect(videos.map(&.id)).to contain("viral_but_new_to_you")
   end
 
   it "gives a newer candidate a bump over an equally-ranked, equally-suggested older one" do
