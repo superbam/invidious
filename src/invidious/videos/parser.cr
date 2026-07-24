@@ -3,6 +3,13 @@ require "json"
 module Invidious::Videos::Parser
   extend self
 
+  # Raises BrokenTubeException while also recording it as a sign that
+  # YouTube changed something the parser expects (see ExtractionHealth).
+  private def raise_broken_tube(element : String)
+    Invidious::ExtractionHealth.report_failure
+    raise BrokenTubeException.new(element)
+  end
+
   # Use to parse both "compactVideoRenderer" and "endScreenVideoRenderer".
   # The former is preferred as it has more videos in it. The second has
   # the same 11 first entries as the compact rendered.
@@ -127,6 +134,7 @@ module Invidious::Videos::Parser
       # Although technically not a call to /videoplayback the fact that YouTube is returning the
       # wrong video means that we should count it as a failure.
       Helpers.get_playback_statistic["totalRequests"] += 1
+      Invidious::ExtractionHealth.report_failure
 
       return {
         "version" => JSON::Any.new(Video::SCHEMA_VERSION.to_i64),
@@ -198,7 +206,7 @@ module Invidious::Videos::Parser
 
     main_results = player_response.dig?("contents", "twoColumnWatchNextResults")
 
-    raise BrokenTubeException.new("twoColumnWatchNextResults") if !main_results
+    raise_broken_tube("twoColumnWatchNextResults") if !main_results
 
     # Primary results are not available on Music videos
     # See: https://github.com/iv-org/invidious/pull/3238#issuecomment-1207193725
@@ -211,8 +219,8 @@ module Invidious::Videos::Parser
         .as_a.find(&.["videoSecondaryInfoRenderer"]?)
         .try &.["videoSecondaryInfoRenderer"]
 
-      raise BrokenTubeException.new("videoPrimaryInfoRenderer") if !video_primary_renderer
-      raise BrokenTubeException.new("videoSecondaryInfoRenderer") if !video_secondary_renderer
+      raise_broken_tube("videoPrimaryInfoRenderer") if !video_primary_renderer
+      raise_broken_tube("videoSecondaryInfoRenderer") if !video_secondary_renderer
     end
 
     video_details = player_response.dig?("videoDetails")
@@ -220,7 +228,7 @@ module Invidious::Videos::Parser
       microformat = {} of String => JSON::Any
     end
 
-    raise BrokenTubeException.new("videoDetails") if !video_details
+    raise_broken_tube("videoDetails") if !video_details
 
     # Basic video infos
 

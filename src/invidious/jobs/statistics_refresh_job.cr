@@ -66,5 +66,8 @@ class Invidious::Jobs::StatisticsRefreshJob < Invidious::Jobs::BaseJob
 
     # Reset playback requests tracker
     STATISTICS["playback"] = {} of String => Int64 | Float64
+
+    # Reset the extraction-failure counter for the next window
+    Invidious::ExtractionHealth.reset
   end
 end

@@ -115,6 +115,12 @@
                 </div>
             <% end %>
 
+            <% if (user = env.get?("user")) && CONFIG.admins.includes?(user.as(Invidious::User).email) && Invidious::ExtractionHealth.degraded? %>
+                <div class="h-box" style="border: 2px solid #e67e22;">
+                    <h3><%= I18n.translate(locale, "extraction_health_admin_warning") %></h3>
+                </div>
+            <% end %>
+
             <%= content %>
 
             <footer>

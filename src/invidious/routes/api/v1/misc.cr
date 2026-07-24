@@ -1,4 +1,18 @@
 module Invidious::Routes::API::V1::Misc
+  # Lightweight endpoint for native clients (e.g. Yattee) to poll for signs
+  # that this instance is having repeated trouble extracting data from
+  # YouTube, so they can surface their own local notification instead of
+  # only finding out from a string of failed video loads.
+  #
+  # Deliberately separate from `stats` below: always available regardless
+  # of CONFIG.statistics_enabled, and doesn't require parsing the rest of
+  # the stats payload just to read one flag.
+  def self.health(env)
+    env.response.content_type = "application/json"
+
+    {"youtubeAccessDegraded" => Invidious::ExtractionHealth.degraded?}.to_json
+  end
+
   # Stats API endpoint for Invidious
   def self.stats(env)
     env.response.content_type = "application/json"

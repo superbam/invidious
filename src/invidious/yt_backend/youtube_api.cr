@@ -601,6 +601,7 @@ module YoutubeAPI
     body = YT_POOL.client() do |client|
       client.post(url, headers: headers, body: data.to_json) do |response|
         if response.status_code != 200
+          Invidious::ExtractionHealth.report_failure
           raise InfoException.new("Error: non 200 status code. Youtube API returned \
             status code #{response.status_code}. See <a href=\"https://docs.invidious.io/youtube-errors-explained/\"> \
             https://docs.invidious.io/youtube-errors-explained/</a> for troubleshooting.")

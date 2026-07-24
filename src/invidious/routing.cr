@@ -334,6 +334,7 @@ module Invidious::Routing
       end
 
       # Misc
+      get "/api/v1/health", {{namespace}}::Misc, :health
       get "/api/v1/stats", {{namespace}}::Misc, :stats
       get "/api/v1/playlists/:plid", {{namespace}}::Misc, :get_playlist
       get "/api/v1/auth/playlists/:plid", {{namespace}}::Misc, :get_playlist
