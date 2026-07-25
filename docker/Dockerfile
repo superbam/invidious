@@ -42,10 +42,14 @@ COPY ./scripts/ ./scripts/
 COPY ./assets/ ./assets/
 COPY ./videojs-dependencies.yml ./videojs-dependencies.yml
 
-# Without these two the spec run below finds no spec files and silently
-# passes in a few seconds, which looks identical to a green suite.
-# spec_helper reads config/config.example.yml to build CONFIG.
+# Without these the spec run below finds no spec files and silently passes in
+# a few seconds, which looks identical to a green suite. spec_helper reads
+# config/config.example.yml to build CONFIG, and the parser specs load
+# fixtures from mocks/ — which is a git submodule, so a build from a clone
+# made without --recurse-submodules will fail here until you run
+# `git submodule update --init`.
 COPY ./config/config.example.yml ./config/config.example.yml
+COPY ./mocks/ ./mocks/
 COPY ./spec/ ./spec/
 
 RUN crystal spec --warnings all \
