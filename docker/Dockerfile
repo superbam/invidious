@@ -42,6 +42,9 @@ COPY ./scripts/ ./scripts/
 COPY ./assets/ ./assets/
 COPY ./videojs-dependencies.yml ./videojs-dependencies.yml
 
+ARG OPENSSL_VERSION
+COPY --from=openssl-builder /openssl-${OPENSSL_VERSION} /openssl-${OPENSSL_VERSION}
+
 # Without these the spec run below finds no spec files and silently passes in
 # a few seconds, which looks identical to a green suite. spec_helper reads
 # config/config.example.yml to build CONFIG, and the parser specs load
@@ -52,11 +55,19 @@ COPY ./config/config.example.yml ./config/config.example.yml
 COPY ./mocks/ ./mocks/
 COPY ./spec/ ./spec/
 
-RUN crystal spec --warnings all \
-    --link-flags "-lxml2 -llzma"
+# `shards install --production` above omits development dependencies, so
+# spectator — the spec framework — isn't present and the spec run below
+# can't even resolve its require. Skip executables/postinstall: running
+# specs doesn't need them, and ameba's postinstall build currently fails
+# on this Crystal version.
+RUN shards install --skip-postinstall --skip-executables
 
-ARG OPENSSL_VERSION
-COPY --from=openssl-builder /openssl-${OPENSSL_VERSION} /openssl-${OPENSSL_VERSION}
+# Needs the same PKG_CONFIG_PATH as the build below: this stage deletes
+# openssl-dev up top, so linking only works against the OpenSSL copied in
+# from openssl-builder.
+RUN PKG_CONFIG_PATH=/openssl-${OPENSSL_VERSION} \
+    crystal spec --warnings all \
+    --link-flags "-lxml2 -llzma"
 
 RUN --mount=type=cache,target=/root/.cache/crystal if [[ "${release}" == 1 ]] ; then \
         PKG_CONFIG_PATH=/openssl-${OPENSSL_VERSION} \
