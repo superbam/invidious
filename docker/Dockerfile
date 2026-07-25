@@ -42,6 +42,12 @@ COPY ./scripts/ ./scripts/
 COPY ./assets/ ./assets/
 COPY ./videojs-dependencies.yml ./videojs-dependencies.yml
 
+# Without these two the spec run below finds no spec files and silently
+# passes in a few seconds, which looks identical to a green suite.
+# spec_helper reads config/config.example.yml to build CONFIG.
+COPY ./config/config.example.yml ./config/config.example.yml
+COPY ./spec/ ./spec/
+
 RUN crystal spec --warnings all \
     --link-flags "-lxml2 -llzma"
 

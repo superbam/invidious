@@ -102,7 +102,7 @@ def rank_discover(
   watched : Array(String),
   subscriptions : Array(String),
   page : Int32 = 1,
-  blocked : Invidious::Database::NotRecommended::Blocked = Invidious::Database::NotRecommended::EMPTY,
+  blocked : Invidious::NotRecommended::Blocked = Invidious::NotRecommended::EMPTY,
 ) : {Array(DiscoverVideo), Bool}
   watched_set = watched.to_set
   subscribed_ucids = subscriptions.to_set

@@ -9,7 +9,7 @@ module Invidious::JSONify::APIv1
     *,
     locale : String?,
     proxy : Bool = false,
-    blocked : Invidious::Database::NotRecommended::Blocked = Invidious::Database::NotRecommended::EMPTY,
+    blocked : Invidious::NotRecommended::Blocked = Invidious::NotRecommended::EMPTY,
   )
     json.object do
       json.field "type", video.video_type

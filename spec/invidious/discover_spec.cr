@@ -140,7 +140,7 @@ Spectator.describe "rank_discover" do
 
   it "excludes a candidate whose video id is on the don't-recommend list" do
     related_lists = [[fake_related("blocked_video"), fake_related("allowed")]]
-    blocked = Invidious::Database::NotRecommended::Blocked.new(
+    blocked = Invidious::NotRecommended::Blocked.new(
       videos: Set{"blocked_video"}, channels: Set(String).new
     )
 
@@ -157,7 +157,7 @@ Spectator.describe "rank_discover" do
       fake_related("from_blocked_b", ucid: "UC_blocked"),
       fake_related("allowed", ucid: "UC_fine"),
     ]]
-    blocked = Invidious::Database::NotRecommended::Blocked.new(
+    blocked = Invidious::NotRecommended::Blocked.new(
       videos: Set(String).new, channels: Set{"UC_blocked"}
     )
 
@@ -178,7 +178,7 @@ Spectator.describe "rank_discover" do
       [fake_related("blocked_but_strong", views: "50M")],
       [fake_related("weak_but_allowed", views: "200000")],
     ]
-    blocked = Invidious::Database::NotRecommended::Blocked.new(
+    blocked = Invidious::NotRecommended::Blocked.new(
       videos: Set{"blocked_but_strong"}, channels: Set(String).new
     )
 

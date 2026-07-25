@@ -95,7 +95,7 @@ struct Video
   # removed. Takes the already-fetched Blocked set rather than a User so the
   # callers (watch page, video JSON) do a single DB read per request instead
   # of one per related video.
-  def related_videos(blocked : Invidious::Database::NotRecommended::Blocked)
+  def related_videos(blocked : Invidious::NotRecommended::Blocked)
     videos = self.related_videos
     return videos if blocked.empty?
 
