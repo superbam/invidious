@@ -104,7 +104,11 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
+      # shorts-filter: submodules are required because the builder stage now
+      # runs the spec suite for real, and those specs load fixtures from mocks/.
       - uses: actions/checkout@v6
+        with:
+          submodules: true
 
       - name: Build Docker
         run: docker compose build
