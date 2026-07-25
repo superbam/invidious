@@ -313,6 +313,14 @@
                 </div>
                 <% end %>
 
+                <%# shorts-filter: review/undo the per-user "don't recommend" list %>
+                <div class="pure-control-group">
+                    <label><%= I18n.translate(locale, "not_recommend_manager_title") %></label>
+                    <a href="/not_recommend_manager" class="pure-button">
+                        <%= I18n.translate(locale, "not_recommend_manager_link_label") %>
+                    </a>
+                </div>
+
                 <% if CONFIG.enable_user_notifications %>
                 <div class="pure-control-group">
                     <label for="notifications_only"><%= I18n.translate(locale, "preferences_notifications_only_label") %></label>

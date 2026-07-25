@@ -210,6 +210,11 @@ module Invidious::Routes::Watch
       invidious_companion = CONFIG.invidious_companion.sample
     end
 
+    # shorts-filter: fetched once here rather than per related video, and
+    # reused by the sidebar list below.
+    blocked = Invidious::Database::NotRecommended.select_all?(user)
+    related_videos = video.related_videos(blocked)
+
     templated "watch"
   end
 

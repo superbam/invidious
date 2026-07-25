@@ -79,7 +79,10 @@ def fetch_discover(user : Invidious::User, page : Int32 = 1) : {Array(DiscoverVi
   source_videos = fetch_videos_concurrently(user.watched.last(HISTORY_WINDOW))
   related_lists = source_videos.map(&.related_videos)
 
-  rank_discover(related_lists, user.watched, user.subscriptions, page)
+  rank_discover(
+    related_lists, user.watched, user.subscriptions, page,
+    blocked: Invidious::Database::NotRecommended.select_all(user)
+  )
 end
 
 # Pure ranking/exclusion logic, split out from fetch_discover so it's
@@ -89,11 +92,17 @@ end
 # caller before this function ever sees the list) only limits how many
 # candidates get generated, it must never limit which candidates get
 # excluded for already being watched.
+#
+# `blocked` is the user's "don't recommend" list; a candidate matching it by
+# either video id or channel is dropped outright rather than down-ranked —
+# unlike the subscription penalty, this is an explicit "never show me this"
+# instruction, so no amount of other signal should be able to override it.
 def rank_discover(
   related_lists : Array(Array(Hash(String, String))),
   watched : Array(String),
   subscriptions : Array(String),
   page : Int32 = 1,
+  blocked : Invidious::Database::NotRecommended::Blocked = Invidious::Database::NotRecommended::EMPTY,
 ) : {Array(DiscoverVideo), Bool}
   watched_set = watched.to_set
   subscribed_ucids = subscriptions.to_set
@@ -110,6 +119,7 @@ def rank_discover(
     related_videos.each_with_index do |related, position|
       id = related["id"]
       next if watched_set.includes?(id)
+      next if blocked.blocks?(id, related["ucid"]?)
       next unless seen_in_source.add?(id)
 
       # YouTube orders each related-videos list by relevance, so a

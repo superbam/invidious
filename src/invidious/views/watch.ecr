@@ -51,8 +51,8 @@ we're going to need to do it here in order to allow for translations.
     "index" => continuation,
     "plid" => plid,
     "length_seconds" => video.length_seconds.to_f,
-    "play_next" => !video.related_videos.empty? && !plid && params.continue,
-    "next_video" => video.related_videos.select { |rv| rv["id"]? }[0]?.try &.["id"],
+    "play_next" => !related_videos.empty? && !plid && params.continue,
+    "next_video" => related_videos.select { |rv| rv["id"]? }[0]?.try &.["id"],
     "youtube_comments_text" => HTML.escape(I18n.translate(locale, "View YouTube comments")),
     "reddit_comments_text" => HTML.escape(I18n.translate(locale, "View Reddit comments")),
     "reddit_permalink_text" => HTML.escape(I18n.translate(locale, "View more comments on Reddit")),
@@ -324,7 +324,7 @@ we're going to need to do it here in order to allow for translations.
 
             <% if params.related_videos %>
                 <div class="h-box">
-                    <% if !video.related_videos.empty? %>
+                    <% if !related_videos.empty? %>
                         <div <% if plid %>style="display:none"<% end %>>
                             <div class="pure-control-group">
                                 <label for="continue"><%= I18n.translate(locale, "preferences_continue_label") %></label>
@@ -334,7 +334,7 @@ we're going to need to do it here in order to allow for translations.
                         </div>
                     <% end %>
 
-                    <% video.related_videos.each do |rv| %>
+                    <% related_videos.each do |rv| %>
                         <% if rv["id"]? %>
                             <div class="pure-u-1">
 
@@ -374,6 +374,22 @@ we're going to need to do it here in order to allow for translations.
                                     %></b>
                                 </div>
                             </h5>
+
+                            <%- if user -%>
+                                <%# shorts-filter: suppress this video, or everything from its channel, from future recommendations %-%>
+                                <div class="video-card-row not-recommend-row">
+                                    <a href="javascript:void(0)" data-onclick="not_recommend" data-kind="video" data-target="<%= rv["id"] %>"
+                                       title="<%= I18n.translate(locale, "not_recommend_video_label") %>">
+                                        <i class="icon ion-ios-close-circle-outline"></i>&nbsp;<%= I18n.translate(locale, "not_recommend_video_label") %>
+                                    </a>
+                                    <%- if !rv["ucid"].empty? -%>
+                                        <a href="javascript:void(0)" data-onclick="not_recommend" data-kind="channel" data-target="<%= rv["ucid"] %>"
+                                           title="<%= I18n.translate(locale, "not_recommend_channel_label") %>">
+                                            <i class="icon ion-ios-close-circle-outline"></i>&nbsp;<%= I18n.translate(locale, "not_recommend_channel_label") %>
+                                        </a>
+                                    <%- end -%>
+                                </div>
+                            <%- end -%>
 
                             </div>
                         <% end %>

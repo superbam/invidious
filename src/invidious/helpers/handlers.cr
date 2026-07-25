@@ -120,6 +120,44 @@ class AuthHandler < Kemal::Handler
   end
 end
 
+# shorts-filter: opportunistic authentication for *public* API routes.
+#
+# AuthHandler above only covers /api/v1/auth/* and 403s when a request isn't
+# authenticated. Some public endpoints can personalize their response when
+# they happen to know who's asking (currently /api/v1/videos/:id, which
+# filters out "don't recommend" entries from recommendedVideos), but must
+# keep working for anonymous callers. This sets "user" when a valid Bearer
+# token or SID is present and otherwise gets out of the way — a bad or
+# expired credential is ignored rather than rejected, since the endpoint is
+# public either way.
+class OptionalAuthHandler < Kemal::Handler
+  {% for method in %w(GET HEAD) %}
+    only ["/api/v1/videos/*"], {{method}}
+  {% end %}
+
+  def call(env)
+    return call_next env unless only_match? env
+
+    begin
+      if token = env.request.headers["Authorization"]?
+        token = JSON.parse(URI.decode_www_form(token.lchop("Bearer ")))
+        session = URI.decode_www_form(token["session"].as_s)
+        validate_request(token, session, env.request, HMAC_KEY, nil)
+      elsif sid = env.request.cookies["SID"]?.try &.value
+        session = sid.starts_with?("v1:") ? nil : sid
+      end
+
+      if session && (email = Invidious::Database::SessionIDs.select_email(session))
+        env.set "user", Invidious::Database::Users.select!(email: email)
+      end
+    rescue
+      # Public route: fall through anonymously rather than failing the request.
+    end
+
+    call_next env
+  end
+end
+
 class APIHandler < Kemal::Handler
   {% for method in %w(GET POST PUT HEAD DELETE PATCH OPTIONS) %}
   only ["/api/v1/*"], {{method}}

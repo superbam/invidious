@@ -79,6 +79,8 @@ module Invidious::Routing
     post "/token_ajax", Routes::Account, :token_ajax
     post "/subscription_ajax", Routes::Subscriptions, :toggle_subscription
     get "/subscription_manager", Routes::Subscriptions, :subscription_manager
+    post "/not_recommend_ajax", Routes::NotRecommended, :ajax
+    get "/not_recommend_manager", Routes::NotRecommended, :manager
   end
 
   def register_iv_playlist_routes
@@ -312,6 +314,13 @@ module Invidious::Routing
       get "/api/v1/auth/feed", {{namespace}}::Authenticated, :feed
 
       get "/api/v1/auth/discover", {{namespace}}::Authenticated, :get_discover
+
+      get "/api/v1/auth/norecommend", {{namespace}}::Authenticated, :get_not_recommended
+      delete "/api/v1/auth/norecommend", {{namespace}}::Authenticated, :clear_not_recommended
+      post "/api/v1/auth/norecommend/videos/:id", {{namespace}}::Authenticated, :not_recommend_video
+      delete "/api/v1/auth/norecommend/videos/:id", {{namespace}}::Authenticated, :recommend_video
+      post "/api/v1/auth/norecommend/channels/:ucid", {{namespace}}::Authenticated, :not_recommend_channel
+      delete "/api/v1/auth/norecommend/channels/:ucid", {{namespace}}::Authenticated, :recommend_channel
 
       get "/api/v1/auth/subscriptions", {{namespace}}::Authenticated, :get_subscriptions
       post "/api/v1/auth/subscriptions/:ucid", {{namespace}}::Authenticated, :subscribe_channel

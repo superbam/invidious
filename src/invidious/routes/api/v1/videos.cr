@@ -21,8 +21,13 @@ module Invidious::Routes::API::V1::Videos
       return error_json(500, ex)
     end
 
+    # Public route, but OptionalAuthHandler sets "user" when the caller
+    # presented a valid token/SID, so recommendedVideos can honor their
+    # "don't recommend" list.
+    blocked = Invidious::Database::NotRecommended.select_all?(env.get?("user").try &.as(User))
+
     return JSON.build do |json|
-      Invidious::JSONify::APIv1.video(video, json, locale: locale, proxy: proxy)
+      Invidious::JSONify::APIv1.video(video, json, locale: locale, proxy: proxy, blocked: blocked)
     end
   end
 

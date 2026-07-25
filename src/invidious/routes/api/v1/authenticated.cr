@@ -205,6 +205,85 @@ module Invidious::Routes::API::V1::Authenticated
     env.response.status_code = 204
   end
 
+  # shorts-filter: per-user "don't recommend" list. Entries are excluded from
+  # the Discover feed and from related-video lists. Returns both sets at once
+  # so a client can cache them and filter locally too:
+  #   { "videos": [<videoId>, ...], "channels": [<ucid>, ...] }
+  def self.get_not_recommended(env)
+    env.response.content_type = "application/json"
+    user = env.get("user").as(User)
+
+    blocked = Invidious::Database::NotRecommended.select_all(user)
+
+    {
+      "videos"   => blocked.videos.to_a.sort!,
+      "channels" => blocked.channels.to_a.sort!,
+    }.to_json
+  end
+
+  def self.not_recommend_video(env)
+    user = env.get("user").as(User)
+
+    id = env.params.url["id"]
+    if !id.match(/^[a-zA-Z0-9_-]{11}$/)
+      return error_json(400, "Invalid video id.")
+    end
+
+    Invidious::Database::NotRecommended.insert(
+      user, Invidious::Database::NotRecommended::Kind::Video, id
+    )
+    env.response.status_code = 204
+  end
+
+  def self.recommend_video(env)
+    user = env.get("user").as(User)
+
+    id = env.params.url["id"]
+    if !id.match(/^[a-zA-Z0-9_-]{11}$/)
+      return error_json(400, "Invalid video id.")
+    end
+
+    Invidious::Database::NotRecommended.delete(
+      user, Invidious::Database::NotRecommended::Kind::Video, id
+    )
+    env.response.status_code = 204
+  end
+
+  def self.not_recommend_channel(env)
+    user = env.get("user").as(User)
+
+    ucid = env.params.url["ucid"]
+    if !ucid.match(/^UC[a-zA-Z0-9_-]{22}$/)
+      return error_json(400, "Invalid channel id.")
+    end
+
+    Invidious::Database::NotRecommended.insert(
+      user, Invidious::Database::NotRecommended::Kind::Channel, ucid
+    )
+    env.response.status_code = 204
+  end
+
+  def self.recommend_channel(env)
+    user = env.get("user").as(User)
+
+    ucid = env.params.url["ucid"]
+    if !ucid.match(/^UC[a-zA-Z0-9_-]{22}$/)
+      return error_json(400, "Invalid channel id.")
+    end
+
+    Invidious::Database::NotRecommended.delete(
+      user, Invidious::Database::NotRecommended::Kind::Channel, ucid
+    )
+    env.response.status_code = 204
+  end
+
+  def self.clear_not_recommended(env)
+    user = env.get("user").as(User)
+
+    Invidious::Database::NotRecommended.clear(user)
+    env.response.status_code = 204
+  end
+
   def self.feed(env)
     env.response.content_type = "application/json"
 

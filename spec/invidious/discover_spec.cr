@@ -138,6 +138,57 @@ Spectator.describe "rank_discover" do
     expect(videos.map(&.id)).to eq(["strong_signal", "weak_signal"])
   end
 
+  it "excludes a candidate whose video id is on the don't-recommend list" do
+    related_lists = [[fake_related("blocked_video"), fake_related("allowed")]]
+    blocked = Invidious::Database::NotRecommended::Blocked.new(
+      videos: Set{"blocked_video"}, channels: Set(String).new
+    )
+
+    videos, _has_more = rank_discover(
+      related_lists, [] of String, [] of String, blocked: blocked
+    )
+
+    expect(videos.map(&.id)).to eq(["allowed"])
+  end
+
+  it "excludes every candidate from a channel on the don't-recommend list" do
+    related_lists = [[
+      fake_related("from_blocked_a", ucid: "UC_blocked"),
+      fake_related("from_blocked_b", ucid: "UC_blocked"),
+      fake_related("allowed", ucid: "UC_fine"),
+    ]]
+    blocked = Invidious::Database::NotRecommended::Blocked.new(
+      videos: Set(String).new, channels: Set{"UC_blocked"}
+    )
+
+    videos, _has_more = rank_discover(
+      related_lists, [] of String, [] of String, blocked: blocked
+    )
+
+    expect(videos.map(&.id)).to eq(["allowed"])
+  end
+
+  it "drops a blocked candidate outright rather than down-ranking it, however strong its other signals" do
+    # Same shape as the "much stronger frequency/position signal" test above,
+    # except the strongly-signaled candidate is blocked — an explicit "never
+    # show me this" must win over any amount of accumulated score.
+    related_lists = [
+      [fake_related("blocked_but_strong", views: "50M")],
+      [fake_related("blocked_but_strong", views: "50M")],
+      [fake_related("blocked_but_strong", views: "50M")],
+      [fake_related("weak_but_allowed", views: "200000")],
+    ]
+    blocked = Invidious::Database::NotRecommended::Blocked.new(
+      videos: Set{"blocked_but_strong"}, channels: Set(String).new
+    )
+
+    videos, _has_more = rank_discover(
+      related_lists, [] of String, [] of String, blocked: blocked
+    )
+
+    expect(videos.map(&.id)).to eq(["weak_but_allowed"])
+  end
+
   it "paginates: has_more is true when more candidates remain, false on the last page" do
     related_lists = [(0...(DISCOVER_COUNT + 5)).map { |i| fake_related("video_#{i}") }]
 

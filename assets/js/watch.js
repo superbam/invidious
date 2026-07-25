@@ -231,6 +231,30 @@ if (video_data.dearrow_titles || video_data.dearrow_thumbnails) {
     });
 }
 
+// shorts-filter: "don't recommend" controls on the related-videos sidebar.
+// Hides the card optimistically and restores it if the request fails, the
+// same pattern mark_watched/remove_subscription use.
+function not_recommend(target) {
+    // target is the <a>; its parent is .not-recommend-row, whose parent is
+    // the .pure-u-1 card wrapping the whole related-video entry.
+    var card = target.parentNode.parentNode;
+    card.style.display = 'none';
+
+    var url = '/not_recommend_ajax?action=add&redirect=false' +
+        '&kind=' + encodeURIComponent(target.getAttribute('data-kind')) +
+        '&target=' + encodeURIComponent(target.getAttribute('data-target'));
+
+    helpers.xhr('POST', url, {payload: 'csrf_token=' + video_data.csrf_token}, {
+        onNon200: function (xhr) {
+            card.style.display = '';
+        }
+    });
+}
+
+document.querySelectorAll('[data-onclick="not_recommend"]').forEach(function (el) {
+    el.onclick = function () { not_recommend(el); };
+});
+
 addEventListener('load', function (e) {
     if (video_data.plid)
         get_playlist(video_data.plid);

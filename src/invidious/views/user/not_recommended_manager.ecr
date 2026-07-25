@@ -1,0 +1,66 @@
+<% content_for "header" do %>
+<title><%= I18n.translate(locale, "not_recommend_manager_title") %> - Invidious</title>
+<% end %>
+
+<div class="h-box">
+    <h2><%= I18n.translate(locale, "not_recommend_manager_title") %></h2>
+    <p><%= I18n.translate(locale, "not_recommend_manager_description") %></p>
+</div>
+
+<% if blocked.empty? %>
+    <div class="h-box">
+        <p><%= I18n.translate(locale, "not_recommend_manager_empty") %></p>
+    </div>
+<% else %>
+    <% unless blocked.channels.empty? %>
+        <div class="h-box">
+            <h3><%= I18n.translate(locale, "not_recommend_manager_channels_label") %></h3>
+        </div>
+
+        <% blocked.channels.to_a.sort_by! { |ucid| channels[ucid]? || ucid }.each do |ucid| %>
+            <div class="h-box">
+                <div class="pure-g">
+                    <div class="pure-u-4-5">
+                        <h3 style="padding-left:0.5em">
+                            <a href="/channel/<%= ucid %>"><%= HTML.escape(channels[ucid]? || ucid) %></a>
+                        </h3>
+                    </div>
+                    <div class="pure-u-1-5" style="text-align:right">
+                        <h3 style="padding-right:0.5em">
+                            <form action="/not_recommend_ajax?action=remove&kind=channel&target=<%= ucid %>&referer=<%= env.get("current_page") %>" method="post">
+                                <input type="hidden" name="csrf_token" value="<%= HTML.escape(env.get?("csrf_token").try &.as(String) || "") %>">
+                                <input style="all:unset; cursor:pointer" type="submit" value="<%= I18n.translate(locale, "not_recommend_manager_undo") %>">
+                            </form>
+                        </h3>
+                    </div>
+                </div>
+            </div>
+        <% end %>
+    <% end %>
+
+    <% unless blocked.videos.empty? %>
+        <div class="h-box">
+            <h3><%= I18n.translate(locale, "not_recommend_manager_videos_label") %></h3>
+        </div>
+
+        <% blocked.videos.to_a.sort!.each do |video_id| %>
+            <div class="h-box">
+                <div class="pure-g">
+                    <div class="pure-u-4-5">
+                        <h3 style="padding-left:0.5em">
+                            <a href="/watch?v=<%= video_id %>"><%= video_id %></a>
+                        </h3>
+                    </div>
+                    <div class="pure-u-1-5" style="text-align:right">
+                        <h3 style="padding-right:0.5em">
+                            <form action="/not_recommend_ajax?action=remove&kind=video&target=<%= video_id %>&referer=<%= env.get("current_page") %>" method="post">
+                                <input type="hidden" name="csrf_token" value="<%= HTML.escape(env.get?("csrf_token").try &.as(String) || "") %>">
+                                <input style="all:unset; cursor:pointer" type="submit" value="<%= I18n.translate(locale, "not_recommend_manager_undo") %>">
+                            </form>
+                        </h3>
+                    </div>
+                </div>
+            </div>
+        <% end %>
+    <% end %>
+<% end %>

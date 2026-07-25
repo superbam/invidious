@@ -91,6 +91,17 @@ struct Video
     info["relatedVideos"]?.try &.as_a.map { |h| h.as_h.transform_values &.as_s } || [] of Hash(String, String)
   end
 
+  # shorts-filter: related videos with the user's "don't recommend" entries
+  # removed. Takes the already-fetched Blocked set rather than a User so the
+  # callers (watch page, video JSON) do a single DB read per request instead
+  # of one per related video.
+  def related_videos(blocked : Invidious::Database::NotRecommended::Blocked)
+    videos = self.related_videos
+    return videos if blocked.empty?
+
+    videos.reject { |rv| blocked.blocks?(rv["id"]?, rv["ucid"]?) }
+  end
+
   def chapters : Array(NamedTuple(title: String, start_seconds: Int32))
     info["chapters"]?.try &.as_a.map { |c|
       {title: c["title"].as_s, start_seconds: c["start_seconds"].as_i}
