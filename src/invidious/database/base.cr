@@ -143,6 +143,20 @@ module Invidious::Database
       LOGGER.error("ensure_feature_columns: playback_positions : #{ex.message}")
     end
 
+    # shorts-filter: per-user "don't recommend" list, same reasoning — every
+    # read path (Discover ranking, related-video filtering) queries this on
+    # any logged-in request, so it has to exist without a manual --migrate.
+    # Must stay above the is_short block, which returns early.
+    begin
+      PG_DB.exec(
+        "CREATE TABLE IF NOT EXISTS public.not_recommended " \
+        "(email text NOT NULL, kind text NOT NULL, target_id text NOT NULL, " \
+        "created timestamptz DEFAULT now(), PRIMARY KEY (email, kind, target_id))"
+      )
+    rescue ex
+      LOGGER.error("ensure_feature_columns: not_recommended : #{ex.message}")
+    end
+
     begin
       already_present = PG_DB.query_one(
         "SELECT EXISTS (SELECT 1 FROM information_schema.columns " \
