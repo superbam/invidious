@@ -205,6 +205,13 @@ module Invidious::Routes::API::V1::Authenticated
     env.response.status_code = 204
   end
 
+  # Optional human label for the don't-recommend management page, sent as
+  # ?title=. The client knows what the user was looking at; resolving it
+  # server-side would mean re-fetching the video or channel just to name it.
+  private def self.not_recommend_title(env) : String?
+    env.params.query["title"]?.presence.try { |t| t.size > 200 ? t[0, 200] : t }
+  end
+
   # shorts-filter: per-user "don't recommend" list. Entries are excluded from
   # the Discover feed and from related-video lists. Returns both sets at once
   # so a client can cache them and filter locally too:
@@ -230,7 +237,7 @@ module Invidious::Routes::API::V1::Authenticated
     end
 
     Invidious::Database::NotRecommended.insert(
-      user, Invidious::Database::NotRecommended::Kind::Video, id
+      user, Invidious::Database::NotRecommended::Kind::Video, id, not_recommend_title(env)
     )
     env.response.status_code = 204
   end
@@ -258,7 +265,7 @@ module Invidious::Routes::API::V1::Authenticated
     end
 
     Invidious::Database::NotRecommended.insert(
-      user, Invidious::Database::NotRecommended::Kind::Channel, ucid
+      user, Invidious::Database::NotRecommended::Kind::Channel, ucid, not_recommend_title(env)
     )
     env.response.status_code = 204
   end

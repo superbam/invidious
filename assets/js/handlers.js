@@ -130,9 +130,11 @@
 
         set_pending(true);
 
+        // data-title is already url-encoded server-side, so it goes on as-is.
         var url = '/not_recommend_ajax?action=add&redirect=false' +
             '&kind=' + encodeURIComponent(target.getAttribute('data-kind')) +
-            '&target=' + encodeURIComponent(target.getAttribute('data-target'));
+            '&target=' + encodeURIComponent(target.getAttribute('data-target')) +
+            '&title=' + (target.getAttribute('data-title') || '');
 
         helpers.xhr('POST', url, {payload: 'csrf_token=' + target.getAttribute('data-csrf')}, {
             onNon200: function (xhr) { set_pending(false); }

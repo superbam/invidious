@@ -153,6 +153,9 @@ module Invidious::Database
         "(email text NOT NULL, kind text NOT NULL, target_id text NOT NULL, " \
         "created timestamptz DEFAULT now(), PRIMARY KEY (email, kind, target_id))"
       )
+      # Added after the table shipped, so existing deployments need the
+      # column bolted on rather than getting it from the CREATE above.
+      PG_DB.exec("ALTER TABLE public.not_recommended ADD COLUMN IF NOT EXISTS title text")
     rescue ex
       LOGGER.error("ensure_feature_columns: not_recommended : #{ex.message}")
     end

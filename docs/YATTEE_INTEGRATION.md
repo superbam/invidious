@@ -107,6 +107,16 @@ Mutations return `204 No Content` with an empty body — don't try to decode one
 so is unblocking something that was never blocked. No need to check first, and
 no need to serialize rapid taps.
 
+**Optional `?title=` on the POSTs.** Pass the video title or channel name you
+were displaying and the instance stores it as the label for its own management
+page. Purely cosmetic and safe to omit — but without it, a blocked channel the
+instance has never fetched can only be shown as a bare `UC…` id, since nothing
+on the server knows its name. Truncated to 200 characters.
+
+```
+POST /api/v1/auth/norecommend/channels/UCuAXFkgsw1L7xaCfnd5JJOw?title=Some%20Channel
+```
+
 ---
 
 ## 3. Where filtering happens

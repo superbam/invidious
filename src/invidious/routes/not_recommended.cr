@@ -57,7 +57,11 @@ module Invidious::Routes::NotRecommended
 
     case action = env.params.query["action"]?
     when "add"
-      Invidious::Database::NotRecommended.insert(user, kind, target)
+      # The label to show on the management page, captured from whatever the
+      # user was looking at. Truncated because it's free text off the page and
+      # only ever needs to be recognisable in a list.
+      title = env.params.query["title"]?.presence.try { |t| t.size > 200 ? t[0, 200] : t }
+      Invidious::Database::NotRecommended.insert(user, kind, target, title)
     when "remove"
       Invidious::Database::NotRecommended.delete(user, kind, target)
     else
@@ -81,12 +85,20 @@ module Invidious::Routes::NotRecommended
     return env.redirect referer if !user
     user = user.as(User)
 
-    blocked = Invidious::Database::NotRecommended.select_all(user)
+    entries = Invidious::Database::NotRecommended.select_entries(user)
 
-    # Resolve channel ids to names where we already have them cached, so the
-    # list is readable; an unknown channel just renders as its raw ucid.
-    channels = Invidious::Database::Channels.select(blocked.channels.to_a)
+    # Entries added before titles were stored (or via an API client that sent
+    # none) fall back to the local channels cache, then to the bare id.
+    untitled_ucids = entries
+      .select { |e| e.kind.channel? && e.title.nil? }
+      .map(&.target_id)
+
+    cached_names = Invidious::Database::Channels.select(untitled_ucids)
       .try(&.to_h { |channel| {channel.id, channel.author} }) || {} of String => String
+
+    blocked_channels = entries.select(&.kind.channel?)
+      .sort_by! { |e| (e.title || cached_names[e.target_id]? || e.target_id).downcase }
+    blocked_videos = entries.select(&.kind.video?).sort_by!(&.created).reverse!
 
     templated "user/not_recommended_manager"
   end

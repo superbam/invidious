@@ -463,6 +463,10 @@ input[type="search"]::-webkit-search-cancel-button {
 
 /* Watch page: sits among the "Switch instance" / "Embed link" paragraphs, so
    match their vertical rhythm and stack the two actions. */
+/* The raw id next to a resolved name on the management page — present so the
+   entry is still identifiable, but not competing with the name. */
+.not-recommend-id { font-size: 70%; font-weight: normal; opacity: 0.55; margin-left: 0.5em; }
+
 #not-recommend-actions { margin: 1em 0; }
 #not-recommend-actions > .not-recommend-form { display: block; margin: 0.35em 0; }
 

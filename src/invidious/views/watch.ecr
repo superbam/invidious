@@ -167,20 +167,20 @@ we're going to need to do it here in order to allow for translations.
                 <%# shorts-filter: don't-recommend controls for the video being watched %>
                 <div id="not-recommend-actions">
                     <form data-onsubmit="return_false" class="not-recommend-form" method="post"
-                          action="/not_recommend_ajax?action=add&kind=video&target=<%= video.id %>&referer=<%= env.get("current_page") %>">
+                          action="/not_recommend_ajax?action=add&kind=video&target=<%= video.id %>&title=<%= URI.encode_www_form(video.title) %>&referer=<%= env.get("current_page") %>">
                         <input type="hidden" name="csrf_token" value="<%= HTML.escape(env.get?("csrf_token").try &.as(String) || "") %>">
                         <button type="submit" class="not-recommend-link" data-onclick="not_recommend"
-                                data-kind="video" data-target="<%= video.id %>" data-csrf="<%= nr_csrf %>">
+                                data-kind="video" data-target="<%= video.id %>" data-title="<%= URI.encode_www_form(video.title) %>" data-csrf="<%= nr_csrf %>">
                             <i class="icon ion-ios-close-circle-outline"></i>&nbsp;<%= I18n.translate(locale, "not_recommend_video_label") %>
                         </button>
                     </form>
 
                     <% if !video.ucid.empty? %>
                         <form data-onsubmit="return_false" class="not-recommend-form" method="post"
-                              action="/not_recommend_ajax?action=add&kind=channel&target=<%= video.ucid %>&referer=<%= env.get("current_page") %>">
+                              action="/not_recommend_ajax?action=add&kind=channel&target=<%= video.ucid %>&title=<%= URI.encode_www_form(video.author) %>&referer=<%= env.get("current_page") %>">
                             <input type="hidden" name="csrf_token" value="<%= HTML.escape(env.get?("csrf_token").try &.as(String) || "") %>">
                             <button type="submit" class="not-recommend-link" data-onclick="not_recommend"
-                                    data-kind="channel" data-target="<%= video.ucid %>" data-csrf="<%= nr_csrf %>">
+                                    data-kind="channel" data-target="<%= video.ucid %>" data-title="<%= URI.encode_www_form(video.author) %>" data-csrf="<%= nr_csrf %>">
                                 <i class="icon ion-ios-close-circle"></i>&nbsp;<%= I18n.translate(locale, "not_recommend_channel_label") %>
                             </button>
                         </form>
@@ -402,20 +402,20 @@ we're going to need to do it here in order to allow for translations.
                                 <%# shorts-filter: suppress this video, or everything from its channel, from future recommendations %-%>
                                 <div class="video-card-row not-recommend-row">
                                     <form data-onsubmit="return_false" class="not-recommend-form" method="post"
-                                          action="/not_recommend_ajax?action=add&kind=video&target=<%= rv["id"] %>&referer=<%= env.get("current_page") %>">
+                                          action="/not_recommend_ajax?action=add&kind=video&target=<%= rv["id"] %>&title=<%= URI.encode_www_form(rv["title"]) %>&referer=<%= env.get("current_page") %>">
                                         <input type="hidden" name="csrf_token" value="<%= HTML.escape(env.get?("csrf_token").try &.as(String) || "") %>">
                                         <button type="submit" class="not-recommend-link" data-onclick="not_recommend"
-                                                data-kind="video" data-target="<%= rv["id"] %>"
+                                                data-kind="video" data-target="<%= rv["id"] %>" data-title="<%= URI.encode_www_form(rv["title"]) %>"
                                                 data-csrf="<%= nr_csrf %>" data-hide=".pure-u-1">
                                             <i class="icon ion-ios-close-circle-outline"></i>&nbsp;<%= I18n.translate(locale, "not_recommend_video_label") %>
                                         </button>
                                     </form>
                                     <%- if !rv["ucid"].empty? -%>
                                         <form data-onsubmit="return_false" class="not-recommend-form" method="post"
-                                              action="/not_recommend_ajax?action=add&kind=channel&target=<%= rv["ucid"] %>&referer=<%= env.get("current_page") %>">
+                                              action="/not_recommend_ajax?action=add&kind=channel&target=<%= rv["ucid"] %>&title=<%= URI.encode_www_form(rv["author"]? || "") %>&referer=<%= env.get("current_page") %>">
                                             <input type="hidden" name="csrf_token" value="<%= HTML.escape(env.get?("csrf_token").try &.as(String) || "") %>">
                                             <button type="submit" class="not-recommend-link" data-onclick="not_recommend"
-                                                    data-kind="channel" data-target="<%= rv["ucid"] %>"
+                                                    data-kind="channel" data-target="<%= rv["ucid"] %>" data-title="<%= URI.encode_www_form(rv["author"]? || "") %>"
                                                     data-csrf="<%= nr_csrf %>" data-hide=".pure-u-1">
                                                 <i class="icon ion-ios-close-circle"></i>&nbsp;<%= I18n.translate(locale, "not_recommend_channel_label") %>
                                             </button>

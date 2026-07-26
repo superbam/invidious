@@ -25,22 +25,26 @@
           nr_csrf = URI.encode_www_form(env.get?("csrf_token").try &.as(String) || "")
         -%>
         <%- if env.get?("show_not_recommend") && env.get?("user") && item.responds_to?(:id) -%>
+            <%- nr_video_title = URI.encode_www_form(item.title.to_s) -%>
             <form data-onsubmit="return_false" class="not-recommend-form" method="post"
-                  action="/not_recommend_ajax?action=add&kind=video&target=<%= item.id %>&referer=<%= env.get("current_page") %>">
+                  action="/not_recommend_ajax?action=add&kind=video&target=<%= item.id %>&title=<%= nr_video_title %>&referer=<%= env.get("current_page") %>">
                 <input type="hidden" name="csrf_token" value="<%= HTML.escape(env.get?("csrf_token").try &.as(String) || "") %>">
                 <button type="submit" class="not-recommend-button" title="<%= I18n.translate(locale, "not_recommend_video_label") %>"
                         data-onclick="not_recommend" data-kind="video" data-target="<%= item.id %>"
+                        data-title="<%= nr_video_title %>"
                         data-csrf="<%= nr_csrf %>" data-hide=".pure-u-md-1-4">
                     <i class="icon ion-ios-close-circle-outline"></i>
                 </button>
             </form>
 
             <%- if !item.ucid.to_s.empty? -%>
+                <%- nr_channel_title = URI.encode_www_form(item.author.to_s) -%>
                 <form data-onsubmit="return_false" class="not-recommend-form" method="post"
-                      action="/not_recommend_ajax?action=add&kind=channel&target=<%= item.ucid %>&referer=<%= env.get("current_page") %>">
+                      action="/not_recommend_ajax?action=add&kind=channel&target=<%= item.ucid %>&title=<%= nr_channel_title %>&referer=<%= env.get("current_page") %>">
                     <input type="hidden" name="csrf_token" value="<%= HTML.escape(env.get?("csrf_token").try &.as(String) || "") %>">
                     <button type="submit" class="not-recommend-button" title="<%= I18n.translate(locale, "not_recommend_channel_label") %>"
                             data-onclick="not_recommend" data-kind="channel" data-target="<%= item.ucid %>"
+                            data-title="<%= nr_channel_title %>"
                             data-csrf="<%= nr_csrf %>" data-hide=".pure-u-md-1-4">
                         <i class="icon ion-ios-close-circle"></i>
                     </button>

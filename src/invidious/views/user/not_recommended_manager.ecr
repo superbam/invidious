@@ -7,27 +7,31 @@
     <p><%= I18n.translate(locale, "not_recommend_manager_description") %></p>
 </div>
 
-<% if blocked.empty? %>
+<% if blocked_channels.empty? && blocked_videos.empty? %>
     <div class="h-box">
         <p><%= I18n.translate(locale, "not_recommend_manager_empty") %></p>
     </div>
 <% else %>
-    <% unless blocked.channels.empty? %>
+    <% unless blocked_channels.empty? %>
         <div class="h-box">
             <h3><%= I18n.translate(locale, "not_recommend_manager_channels_label") %></h3>
         </div>
 
-        <% blocked.channels.to_a.sort_by! { |ucid| channels[ucid]? || ucid }.each do |ucid| %>
+        <% blocked_channels.each do |entry| %>
+            <% name = entry.title || cached_names[entry.target_id]? %>
             <div class="h-box">
                 <div class="pure-g">
                     <div class="pure-u-4-5">
                         <h3 style="padding-left:0.5em">
-                            <a href="/channel/<%= ucid %>"><%= HTML.escape(channels[ucid]? || ucid) %></a>
+                            <a href="/channel/<%= entry.target_id %>"><%= HTML.escape(name || entry.target_id) %></a>
+                            <% if name %>
+                                <span class="not-recommend-id"><%= entry.target_id %></span>
+                            <% end %>
                         </h3>
                     </div>
                     <div class="pure-u-1-5" style="text-align:right">
                         <h3 style="padding-right:0.5em">
-                            <form action="/not_recommend_ajax?action=remove&kind=channel&target=<%= ucid %>&referer=<%= env.get("current_page") %>" method="post">
+                            <form action="/not_recommend_ajax?action=remove&kind=channel&target=<%= entry.target_id %>&referer=<%= env.get("current_page") %>" method="post">
                                 <input type="hidden" name="csrf_token" value="<%= HTML.escape(env.get?("csrf_token").try &.as(String) || "") %>">
                                 <input style="all:unset; cursor:pointer" type="submit" value="<%= I18n.translate(locale, "not_recommend_manager_undo") %>">
                             </form>
@@ -38,22 +42,25 @@
         <% end %>
     <% end %>
 
-    <% unless blocked.videos.empty? %>
+    <% unless blocked_videos.empty? %>
         <div class="h-box">
             <h3><%= I18n.translate(locale, "not_recommend_manager_videos_label") %></h3>
         </div>
 
-        <% blocked.videos.to_a.sort!.each do |video_id| %>
+        <% blocked_videos.each do |entry| %>
             <div class="h-box">
                 <div class="pure-g">
                     <div class="pure-u-4-5">
                         <h3 style="padding-left:0.5em">
-                            <a href="/watch?v=<%= video_id %>"><%= video_id %></a>
+                            <a href="/watch?v=<%= entry.target_id %>"><%= HTML.escape(entry.label) %></a>
+                            <% if entry.title %>
+                                <span class="not-recommend-id"><%= entry.target_id %></span>
+                            <% end %>
                         </h3>
                     </div>
                     <div class="pure-u-1-5" style="text-align:right">
                         <h3 style="padding-right:0.5em">
-                            <form action="/not_recommend_ajax?action=remove&kind=video&target=<%= video_id %>&referer=<%= env.get("current_page") %>" method="post">
+                            <form action="/not_recommend_ajax?action=remove&kind=video&target=<%= entry.target_id %>&referer=<%= env.get("current_page") %>" method="post">
                                 <input type="hidden" name="csrf_token" value="<%= HTML.escape(env.get?("csrf_token").try &.as(String) || "") %>">
                                 <input style="all:unset; cursor:pointer" type="submit" value="<%= I18n.translate(locale, "not_recommend_manager_undo") %>">
                             </form>

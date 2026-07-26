@@ -57,14 +57,45 @@ module Invidious::Database::NotRecommended
     select_all(user)
   end
 
-  def insert(user : User, kind : Kind, target_id : String)
+  # One entry, for the management page. `title` is whatever label was visible
+  # when the entry was created; nil for rows added before titles were stored,
+  # or by an API client that didn't send one.
+  record Entry, kind : Kind, target_id : String, title : String?, created : Time do
+    # What to show in a list. Falls back to the raw id, which is at least
+    # actionable — it's what the URL uses.
+    def label : String
+      t = title
+      return target_id if t.nil? || t.blank?
+      t
+    end
+  end
+
+  def select_entries(user : User) : Array(Entry)
     request = <<-SQL
-      INSERT INTO not_recommended (email, kind, target_id, created)
-      VALUES ($1, $2, $3, now())
-      ON CONFLICT (email, kind, target_id) DO NOTHING
+      SELECT kind, target_id, title, created FROM not_recommended
+      WHERE email = $1
     SQL
 
-    PG_DB.exec(request, user.email, kind.to_db, target_id)
+    PG_DB.query_all(request, user.email, as: {String, String, String?, Time})
+      .compact_map do |(kind, target_id, title, created)|
+        parsed = Kind.parse?(kind)
+        parsed.nil? ? nil : Entry.new(parsed, target_id, title, created)
+      end
+  end
+
+  # `title` is the human label to show on the management page later (channel
+  # name or video title). Stored at insert time rather than resolved on read:
+  # a blocked channel usually isn't in the local `channels` table — nothing
+  # ever fetched it — so a lookup would just yield the bare id.
+  def insert(user : User, kind : Kind, target_id : String, title : String? = nil)
+    request = <<-SQL
+      INSERT INTO not_recommended (email, kind, target_id, title, created)
+      VALUES ($1, $2, $3, $4, now())
+      ON CONFLICT (email, kind, target_id) DO UPDATE
+      SET title = COALESCE(EXCLUDED.title, not_recommended.title)
+    SQL
+
+    PG_DB.exec(request, user.email, kind.to_db, target_id, title.presence)
   end
 
   def delete(user : User, kind : Kind, target_id : String)
