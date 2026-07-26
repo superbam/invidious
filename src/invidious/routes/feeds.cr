@@ -184,6 +184,12 @@ module Invidious::Routes::Feeds
     page ||= 1
 
     env.set "show_watched", true
+    # shorts-filter: this is the feed the don't-recommend list actually
+    # filters, so it's where blocking something is most useful. Opt-in per
+    # page (like show_watched above) rather than on every video card —
+    # the subscription feed, for one, isn't filtered by that list, so a
+    # block button there would suggest an effect it doesn't have.
+    env.set "show_not_recommend", true
 
     videos, has_more = fetch_discover(user, page)
 

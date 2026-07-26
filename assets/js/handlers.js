@@ -75,6 +75,9 @@
     document.querySelectorAll('[data-onclick="notification_requestPermission"]').forEach(function (el) {
         el.onclick = function () { Notification.requestPermission(); };
     });
+    document.querySelectorAll('[data-onclick="not_recommend"]').forEach(function (el) {
+        el.onclick = function () { not_recommend(el); };
+    });
 
     document.querySelectorAll('[data-onrange="update_volume_value"]').forEach(function (el) {
         function update_volume_value() {
@@ -102,6 +105,37 @@
                 count.textContent++;
                 row.style.display = '';
             }
+        });
+    }
+
+    // shorts-filter: add a video or channel to the don't-recommend list.
+    // Lives here rather than in a per-page script because the controls appear
+    // on the watch page, in its related-videos sidebar, and on Discover cards.
+    // The CSRF token rides on data-csrf already url-encoded; the hidden input
+    // in the surrounding form is what makes the no-JS submit work.
+    function not_recommend(target) {
+        // Cards hide themselves; the watch page's control has nothing to hide,
+        // so it just marks itself done instead.
+        var hide_selector = target.getAttribute('data-hide');
+        var card = hide_selector ? target.closest(hide_selector) : null;
+
+        function set_pending(pending) {
+            if (card) {
+                card.style.display = pending ? 'none' : '';
+            } else {
+                target.disabled = pending;
+                target.classList.toggle('not-recommend-done', pending);
+            }
+        }
+
+        set_pending(true);
+
+        var url = '/not_recommend_ajax?action=add&redirect=false' +
+            '&kind=' + encodeURIComponent(target.getAttribute('data-kind')) +
+            '&target=' + encodeURIComponent(target.getAttribute('data-target'));
+
+        helpers.xhr('POST', url, {payload: 'csrf_token=' + target.getAttribute('data-csrf')}, {
+            onNon200: function (xhr) { set_pending(false); }
         });
     }
 

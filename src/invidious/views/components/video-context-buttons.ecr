@@ -17,5 +17,35 @@
             </a>
         <% end %>
 
+        <%-
+          # shorts-filter: don't-recommend controls, opt-in per page via
+          # `show_not_recommend` (set by the Discover route). Same glyph for
+          # both actions, weighted by scope: the outline dismisses one video,
+          # the filled one suppresses everything from the channel.
+          nr_csrf = URI.encode_www_form(env.get?("csrf_token").try &.as(String) || "")
+        -%>
+        <%- if env.get?("show_not_recommend") && env.get?("user") && item.responds_to?(:id) -%>
+            <form data-onsubmit="return_false" class="not-recommend-form" method="post"
+                  action="/not_recommend_ajax?action=add&kind=video&target=<%= item.id %>&referer=<%= env.get("current_page") %>">
+                <input type="hidden" name="csrf_token" value="<%= HTML.escape(env.get?("csrf_token").try &.as(String) || "") %>">
+                <button type="submit" class="not-recommend-button" title="<%= I18n.translate(locale, "not_recommend_video_label") %>"
+                        data-onclick="not_recommend" data-kind="video" data-target="<%= item.id %>"
+                        data-csrf="<%= nr_csrf %>" data-hide=".pure-u-md-1-4">
+                    <i class="icon ion-ios-close-circle-outline"></i>
+                </button>
+            </form>
+
+            <%- if !item.ucid.to_s.empty? -%>
+                <form data-onsubmit="return_false" class="not-recommend-form" method="post"
+                      action="/not_recommend_ajax?action=add&kind=channel&target=<%= item.ucid %>&referer=<%= env.get("current_page") %>">
+                    <input type="hidden" name="csrf_token" value="<%= HTML.escape(env.get?("csrf_token").try &.as(String) || "") %>">
+                    <button type="submit" class="not-recommend-button" title="<%= I18n.translate(locale, "not_recommend_channel_label") %>"
+                            data-onclick="not_recommend" data-kind="channel" data-target="<%= item.ucid %>"
+                            data-csrf="<%= nr_csrf %>" data-hide=".pure-u-md-1-4">
+                        <i class="icon ion-ios-close-circle"></i>
+                    </button>
+                </form>
+            <%- end -%>
+        <%- end -%>
     </div>
 </div>

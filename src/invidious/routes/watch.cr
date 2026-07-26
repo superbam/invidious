@@ -215,6 +215,10 @@ module Invidious::Routes::Watch
     blocked = Invidious::Database::NotRecommended.select_all?(user)
     related_videos = video.related_videos(blocked)
 
+    # Pre-encoded for the don't-recommend controls' JS payload; the forms
+    # around them carry the raw token for the no-JS path.
+    nr_csrf = URI.encode_www_form(env.get?("csrf_token").try &.as(String) || "")
+
     templated "watch"
   end
 
