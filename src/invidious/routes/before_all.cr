@@ -89,14 +89,7 @@ module Invidious::Routes::BeforeAll
 
       if email = Database::SessionIDs.select_email(sid)
         user = Database::Users.select!(email: email)
-        csrf_token = generate_response(sid, {
-          ":authorize_token",
-          ":playlist_ajax",
-          ":signout",
-          ":subscription_ajax",
-          ":token_ajax",
-          ":watch_ajax",
-        }, HMAC_KEY, 1.week)
+        csrf_token = generate_response(sid, CSRF_SCOPES, HMAC_KEY, 1.week)
 
         preferences = user.preferences
         env.set "preferences", preferences

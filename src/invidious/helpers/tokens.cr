@@ -1,5 +1,22 @@
 require "crypto/subtle"
 
+# Scopes granted to the per-session CSRF token minted in before_all.
+#
+# validate_request derives the required scope from the request itself
+# ("POST:watch_ajax" for POST /watch_ajax), so a CSRF-protected route that
+# isn't listed here can never be given a token that validates — every such
+# request just 400s. Adding a new *_ajax route means adding it here too;
+# spec/invidious/tokens_spec.cr checks the two stay in step.
+CSRF_SCOPES = {
+  ":authorize_token",
+  ":not_recommend_ajax",
+  ":playlist_ajax",
+  ":signout",
+  ":subscription_ajax",
+  ":token_ajax",
+  ":watch_ajax",
+}
+
 def generate_token(email, scopes, expire, key)
   session = "v1:#{Base64.urlsafe_encode(Random::Secure.random_bytes(32))}"
   Invidious::Database::SessionIDs.insert(session, email)
