@@ -221,6 +221,7 @@ end
 Kemal.config.powered_by_header = false
 add_handler FilteredCompressHandler.new
 add_handler APIHandler.new
+add_handler DisableAbusableAPIHandler.new
 add_handler AuthHandler.new
 add_handler OptionalAuthHandler.new
 add_handler DenyFrame.new
