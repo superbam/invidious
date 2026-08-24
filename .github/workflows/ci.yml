@@ -26,8 +26,8 @@ on:
       - kubernetes/**
 
       # Nix development files that are not used here.
-      - "*.nix"
-      - flake.flake
+      - .envrc
+      - "nix/**"
 
 jobs:
   build:
@@ -61,7 +61,7 @@ jobs:
             stable: true
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           submodules: true
 
@@ -111,7 +111,7 @@ jobs:
     steps:
       # shorts-filter: submodules are required because the builder stage now
       # runs the spec suite for real, and those specs load fixtures from mocks/.
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           submodules: true
 
@@ -141,7 +141,7 @@ jobs:
     continue-on-error: true
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           submodules: true
 
