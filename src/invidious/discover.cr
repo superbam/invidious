@@ -19,15 +19,15 @@
 # yet, and get_video() always does a live YouTube fetch for anything it
 # can't find in Postgres regardless of the `refresh` flag. Re-fetching ~60
 # of those one at a time was the entire cost of loading this page.
-HISTORY_WINDOW           =  150
-DISCOVER_COUNT           =   24
-SUBSCRIBED_PENALTY       = -1.5
-VIEWS_WEIGHT             = 0.15
-RECENCY_WEIGHT           =  0.5
-RECENCY_WINDOW_DAYS      = 730
-QUALIFIES_MIN_VIEWS      = 100_000
-QUALIFIES_MIN_FREQUENCY  =    1.5
-FETCH_CONCURRENCY        =   10
+HISTORY_WINDOW          =     150
+DISCOVER_COUNT          =      24
+SUBSCRIBED_PENALTY      =    -1.5
+VIEWS_WEIGHT            =    0.15
+RECENCY_WEIGHT          =     0.5
+RECENCY_WINDOW_DAYS     =     730
+QUALIFIES_MIN_VIEWS     = 100_000
+QUALIFIES_MIN_FREQUENCY =     1.5
+FETCH_CONCURRENCY       =      10
 
 record DiscoverVideo,
   id : String,

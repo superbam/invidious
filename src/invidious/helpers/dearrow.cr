@@ -5,8 +5,8 @@
 # same video (see assets/js/dearrow_feed.js). Best-effort only: failures are
 # swallowed, and nothing here blocks the page response.
 module Invidious::Dearrow
-  MAX_CONCURRENT_WARMERS = 6
-  WARMED_CACHE_LIMIT     =  20_000
+  MAX_CONCURRENT_WARMERS =      6
+  WARMED_CACHE_LIMIT     = 20_000
 
   @@queue = ::Channel(String).new(1000)
   @@warmed = Set(String).new
