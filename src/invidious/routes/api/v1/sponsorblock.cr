@@ -24,7 +24,7 @@ module Invidious::Routes::API::V1::SponsorBlock
     categories = raw_cats.split(",")
       .map(&.strip)
       .select { |c| VALID_CATEGORIES.includes?(c) }
-      .uniq
+      .uniq!
 
     if categories.empty?
       return error_json(400, "No valid categories specified")
