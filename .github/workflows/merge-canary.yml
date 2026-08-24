@@ -1,5 +1,6 @@
 # shorts-filter: early-warning that upstream iv-org/invidious still merges
-# cleanly into this fork. Opens (or comments on) a tracking issue when it stops.
+# cleanly into this fork. Writes the result to the job summary and fails the
+# job on conflict, so a broken merge shows up as a red run in Actions.
 #
 # NOTE: scheduled workflows only run from the repository's DEFAULT branch on
 # GitHub. For the weekly cron to fire, set `shorts-filter` as this fork's default
@@ -14,7 +15,6 @@ on:
 
 permissions:
   contents: read
-  issues: write
 
 jobs:
   canary:
@@ -40,7 +40,7 @@ jobs:
         run: |
           if git merge --no-commit --no-ff upstream/master; then
             echo "result=clean" >> "$GITHUB_OUTPUT"
-            echo "✅ upstream/master merges cleanly into shorts-filter"
+            git merge --abort || true
           else
             echo "result=conflict" >> "$GITHUB_OUTPUT"
             {
@@ -49,45 +49,27 @@ jobs:
               echo "EOF"
             } >> "$GITHUB_OUTPUT"
             git merge --abort || true
+            exit 1
           fi
 
-      - name: Report conflict
-        if: steps.merge.outputs.result == 'conflict'
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const conflicts = `${{ steps.merge.outputs.conflicts }}`;
-            const body = [
-              "The scheduled merge canary found that `upstream/master` no longer",
-              "merges cleanly into `shorts-filter`.",
-              "",
-              "**Conflicting files:**",
-              "```",
-              conflicts,
-              "```",
-              "",
-              "Resolve by merging upstream locally — see MAINTAINING.md.",
-            ].join("\n");
-            const title = "⚠️ upstream no longer merges cleanly";
-            const existing = await github.rest.issues.listForRepo({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              state: "open",
-              labels: "merge-canary",
-            });
-            if (existing.data.length > 0) {
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: existing.data[0].number,
-                body,
-              });
-            } else {
-              await github.rest.issues.create({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                title,
-                body,
-                labels: ["merge-canary"],
-              });
-            }
+      - name: Write summary
+        if: always()
+        run: |
+          if [ "${{ steps.merge.outputs.result }}" = "clean" ]; then
+            {
+              echo "### ✅ Upstream merge canary"
+              echo "\`upstream/master\` merges cleanly into \`shorts-filter\`."
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            {
+              echo "### ⚠️ Upstream merge canary: conflict"
+              echo "\`upstream/master\` no longer merges cleanly into \`shorts-filter\`."
+              echo ""
+              echo "**Conflicting files:**"
+              echo '```'
+              echo "${{ steps.merge.outputs.conflicts }}"
+              echo '```'
+              echo ""
+              echo "Resolve by merging upstream locally — see MAINTAINING.md."
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
