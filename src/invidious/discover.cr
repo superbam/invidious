@@ -77,7 +77,17 @@ end
 
 def fetch_discover(user : Invidious::User, page : Int32 = 1) : {Array(DiscoverVideo), Bool}
   source_videos = fetch_videos_concurrently(user.watched.last(HISTORY_WINDOW))
-  related_lists = source_videos.map(&.related_videos)
+  # Mirrors fetch_videos_concurrently's own per-video rescue below: unexpected
+  # related-video markup for one source video (YouTube changes this shape
+  # periodically) must not 500 the whole Discover response — just drop that
+  # source video's contribution to the ranking.
+  related_lists = source_videos.compact_map do |video|
+    begin
+      video.related_videos
+    rescue
+      nil
+    end
+  end
 
   rank_discover(
     related_lists, user.watched, user.subscriptions, page,
