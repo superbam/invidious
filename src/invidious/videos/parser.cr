@@ -88,7 +88,11 @@ module Invidious::Videos::Parser
       next if !renderer
 
       title = renderer.dig?("title", "simpleText").try &.as_s
-      start_seconds = renderer.dig?("onTap", "watchEndpoint", "startTimeSeconds").try &.as_i
+      # YouTube sometimes sends this as a float (e.g. 123.0) rather than an
+      # int; as_i raises on that instead of coercing, so try both.
+      start_seconds = renderer.dig?("onTap", "watchEndpoint", "startTimeSeconds").try do |seconds|
+        seconds.as_i? || seconds.as_f?.try(&.to_i)
+      end
 
       next if !title || !start_seconds
 
