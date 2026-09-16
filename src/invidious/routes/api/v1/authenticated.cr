@@ -106,9 +106,10 @@ module Invidious::Routes::API::V1::Authenticated
       return error_json(409, "Watch history is disabled in preferences.")
     end
 
+    # Sanity checks
     id = env.params.url["id"]
-    if !id.match(/^[a-zA-Z0-9_-]{11}$/)
-      return error_json(400, "Invalid video id.")
+    unless validate_video_id(id)
+      return error_json(400, InvalidVideoID.new(id))
     end
 
     Invidious::Database::Users.mark_watched(user, id)
@@ -122,12 +123,12 @@ module Invidious::Routes::API::V1::Authenticated
       return error_json(409, "Watch history is disabled in preferences.")
     end
 
-    id = env.params.url["id"]
-    if !id.match(/^[a-zA-Z0-9_-]{11}$/)
-      return error_json(400, "Invalid video id.")
+    video_id = env.params.url["id"]
+    unless video_id && validate_video_id(video_id)
+      return error_json(400, InvalidVideoID.new(video_id))
     end
 
-    Invidious::Database::Users.mark_unwatched(user, id)
+    Invidious::Database::Users.mark_unwatched(user, video_id)
     env.response.status_code = 204
   end
 
@@ -487,8 +488,9 @@ module Invidious::Routes::API::V1::Authenticated
     end
 
     video_id = env.params.json["videoId"].try &.as(String)
-    if !video_id
-      return error_json(403, "Invalid videoId")
+    # Sanity checks
+    unless video_id && validate_video_id(video_id)
+      return error_json(400, InvalidVideoID.new(video_id))
     end
 
     begin
@@ -556,7 +558,6 @@ module Invidious::Routes::API::V1::Authenticated
   def self.get_tokens(env)
     env.response.content_type = "application/json"
     user = env.get("user").as(User)
-    scopes = env.get("scopes").as(Array(String))
 
     tokens = Invidious::Database::SessionIDs.select_all(user.email)
 
@@ -574,6 +575,8 @@ module Invidious::Routes::API::V1::Authenticated
 
   def self.register_token(env)
     user = env.get("user").as(User)
+    # Used by template bellow.
+    # ameba:disable Lint/UselessAssign
     locale = env.get("preferences").as(Preferences).locale
 
     case env.request.headers["Content-Type"]?
@@ -600,6 +603,8 @@ module Invidious::Routes::API::V1::Authenticated
     if sid = env.get?("sid").try &.as(String)
       env.response.content_type = "text/html"
 
+      # Used by template bellow.
+      # ameba:disable Lint/UselessAssign
       csrf_token = generate_response(sid, {":authorize_token"}, HMAC_KEY, use_nonce: true)
       return templated "user/authorize_token"
     else
@@ -638,7 +643,6 @@ module Invidious::Routes::API::V1::Authenticated
   def self.unregister_token(env)
     env.response.content_type = "application/json"
 
-    user = env.get("user").as(User)
     scopes = env.get("scopes").as(Array(String))
 
     session = env.params.json["session"]?.try &.as(String)
@@ -660,7 +664,7 @@ module Invidious::Routes::API::V1::Authenticated
     env.response.content_type = "text/event-stream"
 
     raw_topics = env.params.body["topics"]? || env.params.query["topics"]?
-    topics = raw_topics.try &.split(",").uniq.first(1000)
+    topics = raw_topics.try &.split(",").uniq!.first(1000)
     topics ||= [] of String
 
     Helpers.create_notification_stream(env, topics, CONNECTION_CHANNEL)
