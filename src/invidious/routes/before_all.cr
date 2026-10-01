@@ -97,6 +97,12 @@ module Invidious::Routes::BeforeAll
         env.set "sid", sid
         env.set "csrf_token", csrf_token
         env.set "user", user
+
+        # Build the Discover feed in the background on ordinary page loads so
+        # it's already ready when the tab is clicked.
+        if env.request.method == "GET" && preferences.feed_menu.includes?("Discover")
+          DiscoverCache.warm(user)
+        end
       end
     end
 

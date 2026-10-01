@@ -28,6 +28,9 @@ RECENCY_WINDOW_DAYS     =     730
 QUALIFIES_MIN_VIEWS     = 100_000
 QUALIFIES_MIN_FREQUENCY =     1.5
 FETCH_CONCURRENCY       =      10
+CACHE_TTL               = 15.minutes
+CACHE_MIN_REFRESH       = 2.minutes
+CACHE_MAX_USERS         = 256
 
 record DiscoverVideo,
   id : String,
@@ -76,6 +79,13 @@ record DiscoverVideo,
 end
 
 def fetch_discover(user : Invidious::User, page : Int32 = 1) : {Array(DiscoverVideo), Bool}
+  DiscoverCache.fetch(user, page)
+end
+
+# The expensive part: reads up to HISTORY_WINDOW cached videos and ranks every
+# candidate. Returns the *whole* ranked list (not one page) so the result can
+# be cached per user and sliced cheaply on each request.
+def build_discover_ranking(user : Invidious::User) : Array(DiscoverVideo)
   source_videos = fetch_videos_concurrently(user.watched.last(HISTORY_WINDOW))
   # Mirrors fetch_videos_concurrently's own per-video rescue below: unexpected
   # related-video markup for one source video (YouTube changes this shape
@@ -89,10 +99,139 @@ def fetch_discover(user : Invidious::User, page : Int32 = 1) : {Array(DiscoverVi
     end
   end
 
-  rank_discover(
-    related_lists, user.watched, user.subscriptions, page,
+  rank_discover_all(
+    related_lists, user.watched, user.subscriptions,
     blocked: Invidious::Database::NotRecommended.select_all(user)
   )
+end
+
+# Per-user cache of the ranked Discover list, so opening the tab doesn't wait
+# on ~150 video reads plus a re-rank.
+#
+# - A request is always served from the cache when an entry exists, even a
+#   stale one; staleness only triggers a background rebuild. The served list
+#   is re-filtered against the user's *current* watched and don't-recommend
+#   sets, so "I just watched/blocked this" takes effect immediately.
+# - `warm` is called on ordinary page loads, so the first build happens while
+#   the user is still on another page rather than when they click Discover.
+# - Concurrent builds for one user are collapsed into one.
+module DiscoverCache
+  record Entry, ranked : Array(DiscoverVideo), signature : UInt64, computed_at : Time
+
+  @@entries = Hash(String, Entry).new
+  @@building = Hash(String, ::Channel(Nil)).new
+  @@mutex = Mutex.new
+
+  def self.fetch(user : Invidious::User, page : Int32) : {Array(DiscoverVideo), Bool}
+    entry = @@mutex.synchronize { @@entries[user.email]? }
+
+    if entry
+      refresh_in_background(user) if stale?(entry, user)
+      ranked = entry.ranked
+    else
+      ranked = build(user)
+    end
+
+    blocked = Invidious::Database::NotRecommended.select_all(user)
+    paginate(ranked, user.watched.to_set, blocked, page)
+  end
+
+  # Start a background build if this user has no fresh entry. Cheap no-op
+  # otherwise, so it's safe to call from every page load.
+  def self.warm(user : Invidious::User) : Nil
+    entry = @@mutex.synchronize { @@entries[user.email]? }
+    refresh_in_background(user) if entry.nil? || stale?(entry, user)
+  end
+
+  def self.clear : Nil
+    @@mutex.synchronize { @@entries.clear }
+  end
+
+  # Drops what the user has since watched or blocked from a cached list and
+  # slices out one page. Pure, so it's covered by specs without a DB.
+  def self.paginate(
+    ranked : Array(DiscoverVideo),
+    watched : Set(String),
+    blocked : Invidious::NotRecommended::Blocked,
+    page : Int32,
+  ) : {Array(DiscoverVideo), Bool}
+    visible = ranked.reject { |v| watched.includes?(v.id) || blocked.blocks?(v.id, v.ucid) }
+
+    offset = (page - 1) * DISCOVER_COUNT
+    page_videos = visible[offset, DISCOVER_COUNT]? || [] of DiscoverVideo
+    {page_videos, visible.size > offset + page_videos.size}
+  end
+
+  # What a ranking depends on. Blocked entries are deliberately absent: a new
+  # block is applied at read time, and an unblock isn't worth a rebuild by
+  # itself.
+  private def self.signature(user : Invidious::User) : UInt64
+    {user.watched.last(HISTORY_WINDOW), user.subscriptions}.hash
+  end
+
+  private def self.stale?(entry : Entry, user : Invidious::User) : Bool
+    age = Time.utc - entry.computed_at
+    return true if age > CACHE_TTL
+    # Watching something or (un)subscribing changes the inputs, but rebuilding
+    # on every single watch would be wasteful — rate-limit it.
+    age > CACHE_MIN_REFRESH && entry.signature != signature(user)
+  end
+
+  private def self.refresh_in_background(user : Invidious::User) : Nil
+    spawn do
+      begin
+        build(user)
+      rescue ex
+        LOGGER.warn("discover: background refresh failed for a user: #{ex.message}")
+      end
+    end
+  end
+
+  # Builds and stores this user's ranking, or — if a build is already running
+  # — waits for it and uses its result.
+  private def self.build(user : Invidious::User) : Array(DiscoverVideo)
+    email = user.email
+    waiting_on = nil
+    mine = nil
+
+    @@mutex.synchronize do
+      if running = @@building[email]?
+        waiting_on = running
+      else
+        mine = @@building[email] = ::Channel(Nil).new
+      end
+    end
+
+    if waiting_on
+      waiting_on.receive?
+      if entry = @@mutex.synchronize { @@entries[email]? }
+        return entry.ranked
+      end
+      # The build we waited on failed; fall back to computing it ourselves.
+      return build_discover_ranking(user)
+    end
+
+    begin
+      inputs = signature(user)
+      ranked = build_discover_ranking(user)
+      store(email, Entry.new(ranked, inputs, Time.utc))
+      ranked
+    ensure
+      @@mutex.synchronize { @@building.delete(email) }
+      mine.try &.close
+    end
+  end
+
+  private def self.store(email : String, entry : Entry) : Nil
+    @@mutex.synchronize do
+      @@entries[email] = entry
+
+      if @@entries.size > CACHE_MAX_USERS
+        oldest = @@entries.min_by { |_, e| e.computed_at }[0]
+        @@entries.delete(oldest)
+      end
+    end
+  end
 end
 
 # Pure ranking/exclusion logic, split out from fetch_discover so it's
@@ -114,6 +253,22 @@ def rank_discover(
   page : Int32 = 1,
   blocked : Invidious::NotRecommended::Blocked = Invidious::NotRecommended::EMPTY,
 ) : {Array(DiscoverVideo), Bool}
+  ranked = rank_discover_all(related_lists, watched, subscriptions, blocked: blocked)
+
+  offset = (page - 1) * DISCOVER_COUNT
+  page_videos = ranked[offset, DISCOVER_COUNT]? || [] of DiscoverVideo
+
+  {page_videos, ranked.size > offset + page_videos.size}
+end
+
+# The full ranked list; rank_discover and DiscoverCache both slice pages out
+# of it.
+def rank_discover_all(
+  related_lists : Array(Array(Hash(String, String))),
+  watched : Array(String),
+  subscriptions : Array(String),
+  blocked : Invidious::NotRecommended::Blocked = Invidious::NotRecommended::EMPTY,
+) : Array(DiscoverVideo)
   watched_set = watched.to_set
   subscribed_ucids = subscriptions.to_set
 
@@ -150,17 +305,7 @@ def rank_discover(
     -final_score(frequency_scores[id], candidate_info[id], from_subscription.includes?(id))
   end
 
-  # The full ranking is recomputed every page (no caching, see module
-  # comment history), so pagination only changes which slice gets turned
-  # into full DiscoverVideo objects to render — the underlying tally
-  # above is the same work either way.
-  offset = (page - 1) * DISCOVER_COUNT
-  page_ids = ranked_ids[offset, DISCOVER_COUNT]? || [] of String
-  has_more = ranked_ids.size > offset + page_ids.size
-
-  videos = page_ids.map { |id| build_discover_video(candidate_info[id]) }
-
-  {videos, has_more}
+  ranked_ids.map { |id| build_discover_video(candidate_info[id]) }
 end
 
 # Combines the position/frequency signal with the secondary bumps: a

@@ -204,3 +204,43 @@ Spectator.describe "rank_discover" do
     expect(page1.map(&.id).to_set & page2.map(&.id).to_set).to be_empty
   end
 end
+
+Spectator.describe "DiscoverCache.paginate" do
+  def video(id : String, ucid : String = "UC_default") : DiscoverVideo
+    DiscoverVideo.new(
+      id: id, title: id, author: "Author", ucid: ucid, length_seconds: 120,
+      views: 1_000_i64, published: Time.utc, author_verified: false,
+    )
+  end
+
+  let(no_blocks) { Invidious::NotRecommended::EMPTY }
+
+  it "drops videos watched since the list was cached" do
+    ranked = [video("a"), video("b")]
+
+    videos, _ = DiscoverCache.paginate(ranked, Set{"a"}, no_blocks, 1)
+
+    expect(videos.map(&.id)).to eq(["b"])
+  end
+
+  it "drops videos and channels blocked since the list was cached" do
+    ranked = [video("a"), video("b", "UC_bad"), video("c")]
+    blocked = Invidious::NotRecommended::Blocked.new(Set{"c"}, Set{"UC_bad"})
+
+    videos, _ = DiscoverCache.paginate(ranked, Set(String).new, blocked, 1)
+
+    expect(videos.map(&.id)).to eq(["a"])
+  end
+
+  it "paginates after filtering, reporting whether more remain" do
+    ranked = (1..(DISCOVER_COUNT + 5)).map { |i| video("v#{i}") }
+
+    first, more_first = DiscoverCache.paginate(ranked, Set{"v1"}, no_blocks, 1)
+    second, more_second = DiscoverCache.paginate(ranked, Set{"v1"}, no_blocks, 2)
+
+    expect(first.size).to eq(DISCOVER_COUNT)
+    expect(more_first).to be_true
+    expect(second.size).to eq(4)
+    expect(more_second).to be_false
+  end
+end
