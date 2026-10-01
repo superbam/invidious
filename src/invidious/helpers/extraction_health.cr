@@ -16,8 +16,24 @@ module Invidious::ExtractionHealth
   # degraded enough to be worth telling admins about.
   THRESHOLD = 5
 
+  # Time.monotonic is deprecated from Crystal 1.19 (CI builds with
+  # --error-on-warnings), but Time.instant doesn't exist before it.
+  {% if compare_versions(Crystal::VERSION, "1.19.0") >= 0 %}
+    alias MonotonicTime = Time::Instant
+
+    def self.monotonic_now : MonotonicTime
+      Time.instant
+    end
+  {% else %}
+    alias MonotonicTime = Time::Span
+
+    def self.monotonic_now : MonotonicTime
+      Time.monotonic
+    end
+  {% end %}
+
   @@failures = 0_i64
-  @@window_start = Time.monotonic
+  @@window_start : MonotonicTime = monotonic_now
 
   # Failure count from the last completed window, so the flag stays visible
   # for a full window after a burst instead of vanishing on rollover.
@@ -36,17 +52,17 @@ module Invidious::ExtractionHealth
   def reset : Nil
     @@failures = 0_i64
     @@previous_failures = 0_i64
-    @@window_start = Time.monotonic
+    @@window_start = monotonic_now
   end
 
   private def roll_window : Nil
-    elapsed = Time.monotonic - @@window_start
+    elapsed = monotonic_now - @@window_start
     return if elapsed < WINDOW
 
     # If more than one full window passed with no activity, the previous
     # window was empty.
     @@previous_failures = elapsed < WINDOW * 2 ? @@failures : 0_i64
     @@failures = 0_i64
-    @@window_start = Time.monotonic
+    @@window_start = monotonic_now
   end
 end
